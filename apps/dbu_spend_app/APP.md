@@ -22,6 +22,4 @@ Filters:
 - Date range
 
 Constraints:
-- Use Plotly for charts
-- Convert to pandas only in UI layer
-- No SQL outside data access module
+- None beyond GLOBAL_RULES

@@ -190,7 +190,7 @@ Objective:
 <One sentence describing what this app shows or enables>
 
 Data:
-- <catalog>.<schema>.<table>   ← Gold table from Unity Catalog
+- <catalog.schema.table>
 
 Metrics:
 - <metric 1>
@@ -200,19 +200,16 @@ Transformations:
 - <grouping/aggregation logic>
 
 UI:
-- <chart type — or leave blank and let Genie choose>
+- <specific chart type if required — omit to let Genie choose>
 
 Filters:
 - <filter dimension>
 
 Constraints:
-- <app-specific constraints only — GLOBAL_RULES already apply>
+- <only rules not already covered by GLOBAL_RULES — omit section if none>
 ```
 
-**Rules for writing APP.md:**
-- Reference only Gold layer tables (`catalog.gold.table_name`). Never Bronze or Silver.
-- Do not redeclare stack, library, or architecture — those come from the loaded instructions.
-- Keep transformations declarative (describe what, not how).
+The loaded constraints already enforce Gold tables, three-layer separation, Plotly, spark.table(), and ai-dev-kit. Only add a `Constraints` section for things genuinely unique to this app.
 
 ---
 
