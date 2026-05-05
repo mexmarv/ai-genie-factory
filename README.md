@@ -11,7 +11,7 @@ The AI Genie Factory is a methodology for building enterprise Databricks applica
 
 The core insight: **AI doesn't generate architecture — it generates code. Architecture has to be defined first, then enforced as constraints.**
 
-This repository is that constraint layer. It contains markdown specification files that are deployed into the Databricks workspace filesystem, where Genie Code automatically picks them up as persistent instructions. Every generated app then respects your platform standards: Medallion layers, Unity Catalog governance, semantic layer KPIs, and the [ai-dev-kit](https://github.com/databricks/ai-dev-kit) component library.
+This repository is that constraint layer. It contains markdown specification files that, when loaded into Databricks Genie Code as persistent instructions, ensure every generated app respects your platform standards: Medallion layers, Unity Catalog governance, semantic layer KPIs, and the [ai-dev-kit](https://github.com/databricks/ai-dev-kit) component library.
 
 At Alpura, this system produced **90+ apps** across Finance, Sales, Operations, and Marketing — most in days, some in hours.
 
@@ -43,22 +43,23 @@ The factory gives you three things:
 
 ```
 ai-genie-factory/
-├── GLOBAL_RULES.md          # Non-negotiable platform + architecture rules
-├── STACK.md                 # Technology stack (language, UI, data access, libraries)
+├── AGENTS.md                # ⬅ COMBINED constraints file — this is what you load into Genie Code
+├── GLOBAL_RULES.md          # Platform + architecture rules (included in AGENTS.md)
+├── STACK.md                 # Technology stack (included in AGENTS.md)
 ├── modules/
-│   ├── data_access.md       # All spark.table() patterns and Unity Catalog access
-│   └── ui_patterns.md       # Approved Plotly chart types
+│   ├── data_access.md       # spark.table() patterns (included in AGENTS.md)
+│   └── ui_patterns.md       # Plotly chart patterns (included in AGENTS.md)
 └── apps/
     └── dbu_spend_app/
-        └── APP.md           # Example: DBU Spend Monitor
+        └── APP.md           # Example app spec — pasted into the Genie Code prompt
 ```
+
+> **`AGENTS.md` is the single file you work with.** It is the combined content of `GLOBAL_RULES.md`, `STACK.md`, `modules/data_access.md`, and `modules/ui_patterns.md` in one place, ready to be loaded into Genie Code. The individual files are the source of truth — if you edit them, update `AGENTS.md` to match.
 
 ### Constraint Priority
 
-When Genie processes multiple files, this priority order applies:
-
-| Priority | File | Purpose |
-|----------|------|---------|
+| Priority | Source | Purpose |
+|----------|--------|---------|
 | 1 | `GLOBAL_RULES.md` | Platform law — never overridden |
 | 2 | `STACK.md` | Technology choices — not redefined per app |
 | 3 | `modules/*.md` | Reusable patterns — imported, not reinvented |
@@ -68,23 +69,20 @@ When Genie processes multiple files, this priority order applies:
 
 ## How Genie Code Reads Constraints
 
-Genie Code does **not** accept `.md` file uploads in chat (only images can be attached there). Instead, constraints are loaded from specific files in the **Databricks workspace filesystem**. Genie Code reads these automatically — no chat attachment needed.
+Genie Code does **not** accept `.md` file uploads in chat (only images can be attached). Constraints are loaded from specific files saved in the **Databricks workspace filesystem**, where Genie Code picks them up automatically.
 
-There are three mechanisms, from broadest to narrowest scope:
-
-| Mechanism | File | Location in workspace | Scope |
-|-----------|------|-----------------------|-------|
-| Workspace instructions (admin) | `.assistant_workspace_instructions.md` | `Workspace/` root | All users, all sessions |
+| Mechanism | File | Location | Scope |
+|-----------|------|----------|-------|
 | User instructions | `.assistant_instructions.md` | `/Users/<your-email>/` | Your sessions only |
-| Project instructions | `AGENTS.md` | Any project folder | Notebooks in that folder subtree |
+| Workspace instructions (admin) | `.assistant_workspace_instructions.md` | `Workspace/` root | All users, all sessions |
 
-**Limit:** All instruction files are capped at 20,000 characters (the combined factory files are well under this).
+**Character limit: 20,000.** `AGENTS.md` is ~4,200 characters — well under the limit.
 
 ---
 
 ## Quick Start: Run the Example
 
-This walks you through deploying the **DBU Spend Monitor** — a working app that visualizes Databricks Unit consumption over time and by cluster, reading from `system.billing.usage`.
+This deploys the **DBU Spend Monitor** — a working app that visualizes Databricks Unit consumption over time and by cluster from `system.billing.usage`.
 
 ### Prerequisites
 
@@ -92,17 +90,25 @@ This walks you through deploying the **DBU Spend Monitor** — a working app tha
 - Access to `system.billing.usage` (requires `system` catalog read permission)
 - Genie Code enabled in your workspace
 
-### Step 1 — Load the constraints into Genie Code (one-time setup)
+---
+
+### Step 1 — Load constraints into Genie Code (one-time setup)
+
+> **This step loads the entire factory into Genie Code. You only do this once — all future apps just need a prompt.**
 
 1. Click the **Genie Code sparkle icon** (upper-right corner of your workspace) to open the Genie Code pane.
 2. Inside the pane, click the **gear icon** to open Genie Code settings.
 3. Under **User instructions**, click **Add instructions file**.
 
-This creates `/Users/<your-email>/.assistant_instructions.md` and opens it in a new tab. Paste the full contents of [`AGENTS.md`](./AGENTS.md) from this repository into it and save. Limit is 20,000 characters — the factory constraints are well under that.
+This creates `/Users/<your-email>/.assistant_instructions.md` and opens it in a new tab.
 
-From this point on, every Genie Code session you open will automatically apply these constraints — no need to repeat this step for future apps.
+> **Copy the entire contents of [`AGENTS.md`](./AGENTS.md) and paste it into this file, then save.**
 
-> **Want it workspace-wide?** A workspace admin can paste the same content into `Workspace/.assistant_workspace_instructions.md` to enforce the constraints for all users automatically.
+`AGENTS.md` contains all the factory constraints combined — global rules, stack, data access patterns, and UI patterns — in a single file ready to paste.
+
+From this point on, every Genie Code session automatically applies these constraints.
+
+> **Want it workspace-wide?** A workspace admin can paste the same `AGENTS.md` content into `Workspace/.assistant_workspace_instructions.md` to enforce constraints for all users.
 
 ---
 
@@ -157,10 +163,7 @@ Constraints:
 
 --- END SPEC ---
 
-Rules:
-- Do not redefine stack or architecture
-- Follow all constraints strictly
-
+Do not redefine stack or architecture. Follow all constraints strictly.
 Return only the deployed application details.
 ```
 
@@ -177,7 +180,8 @@ Genie Code will generate and deploy a Databricks App with:
 
 ## Building Your Own App
 
-Create `apps/<your_app_name>/APP.md` following this template:
+1. Create `apps/<your_app_name>/APP.md` in this repo using the template below.
+2. Paste its contents into a new Genie Code session using the same prompt structure as Step 2 above, replacing the DBU Spend Monitor spec with your own.
 
 ```markdown
 APP NAME: <Name>
@@ -186,7 +190,7 @@ Objective:
 <One sentence describing what this app shows or enables>
 
 Data:
-- <catalog>.<schema>.<table>   ← always a Gold table from Unity Catalog
+- <catalog>.<schema>.<table>   ← Gold table from Unity Catalog
 
 Metrics:
 - <metric 1>
@@ -196,34 +200,34 @@ Transformations:
 - <grouping/aggregation logic>
 
 UI:
-- <chart type from modules/ui_patterns.md>
-- <chart type>
+- <chart type — or leave blank and let Genie choose>
 
 Filters:
 - <filter dimension>
 
 Constraints:
-- <any app-specific constraints beyond GLOBAL_RULES>
+- <app-specific constraints only — GLOBAL_RULES already apply>
 ```
 
 **Rules for writing APP.md:**
-- Reference only Gold layer tables (e.g., `catalog.gold.sales_daily`). Never Bronze or Silver in UI-facing apps.
-- Do not redeclare the stack, charts library, or architecture — those are inherited.
-- Keep transformations declarative (describe what, not how). Genie decides the implementation.
-- Add app-specific constraints only for things not covered by GLOBAL_RULES.md.
+- Reference only Gold layer tables (`catalog.gold.table_name`). Never Bronze or Silver.
+- Do not redeclare stack, library, or architecture — those come from the loaded instructions.
+- Keep transformations declarative (describe what, not how).
 
 ---
 
 ## Extending the Factory
 
+When you update any source file, reflect the change in `AGENTS.md` so what's loaded into Genie Code stays in sync.
+
 ### Add a new data access pattern
-Edit `modules/data_access.md` when a new Unity Catalog table or read pattern is needed across multiple apps. Keep it as `spark.table("catalog.schema.table")` — no JDBC, no raw SQL.
+Edit `modules/data_access.md` — add new `spark.table()` patterns reusable across apps. Update the corresponding section in `AGENTS.md`.
 
 ### Add a new chart type
-Edit `modules/ui_patterns.md` when a new Plotly chart type is approved for use. Only add chart types that are compatible with the Plotly/Databricks Apps stack.
+Edit `modules/ui_patterns.md` — add new Plotly chart types compatible with the stack. Update `AGENTS.md`.
 
-### Add architecture constraints
-Edit `GLOBAL_RULES.md` only when a new platform-wide rule applies to all future apps — for example, adding a data quality requirement or a new governance policy.
+### Add a global architecture rule
+Edit `GLOBAL_RULES.md` — only for platform-wide rules that apply to every future app. Update `AGENTS.md`.
 
 ---
 
@@ -233,24 +237,24 @@ Every app generated by this factory inherits these standards:
 
 **Medallion Architecture**
 - Apps consume Gold tables only. Bronze and Silver are pipeline concerns.
-- Gold tables are materialized views or Delta tables with Photon-optimized star schemas.
+- Gold tables are materialized views or Photon-optimized Delta tables with star schema.
 
 **Unity Catalog Governance**
 - All tables referenced as `catalog.schema.table` (three-part naming).
 - Access controlled via RBAC/ACLs — apps inherit workspace permissions.
-- Column lineage and data contracts are tracked at the platform level.
+- Column lineage and data contracts tracked at the platform level.
 
 **Semantic Layer**
-- Central KPIs (EBITDA, Sales, Finance, Operations) defined once in the semantic layer via `dbxs` metrics and Unity Catalog metrics store.
+- Central KPIs (EBITDA, Sales, Finance, Operations) defined once via `dbxs` metrics in Unity Catalog.
 - No app recalculates a KPI that already exists in the semantic layer.
 
 **Three-Layer Separation**
-- `Data` — `spark.table()` calls only, in the data access module
-- `Logic` — transformations and aggregations, no UI dependencies
+- `Data` — `spark.table()` reads only, no transformation logic
+- `Logic` — aggregations and transformations, no SQL or UI dependencies
 - `UI` — Plotly charts, pandas conversion happens here and nowhere else
 
 **Component Library**
-- All reusable components sourced from [databricks/ai-dev-kit](https://github.com/databricks/ai-dev-kit)
+- All reusable components from [databricks/ai-dev-kit](https://github.com/databricks/ai-dev-kit)
 - No custom components that duplicate existing ai-dev-kit patterns
 
 ---
@@ -266,6 +270,6 @@ When contributing, please keep attribution in any forks or derived work referenc
 ## Reference
 
 - Component library: [github.com/databricks/ai-dev-kit](https://github.com/databricks/ai-dev-kit)
-- Databricks Genie Code: [docs.databricks.com/genie](https://docs.databricks.com/genie)
-- Databricks Apps: [docs.databricks.com/apps](https://docs.databricks.com/apps)
+- Databricks Genie Code docs: [docs.databricks.com/aws/en/genie-code](https://docs.databricks.com/aws/en/genie-code)
+- Databricks Apps: [docs.databricks.com/aws/en/dev-tools/databricks-apps](https://docs.databricks.com/aws/en/dev-tools/databricks-apps)
 - DATA+AI Summit 2026 talk: *0 to 100 AI/BI Apps in 120 Days* — Marvin Nahmias & Javier Hauss, Alpura
