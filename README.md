@@ -11,7 +11,7 @@ The AI Genie Factory is a methodology for building enterprise Databricks applica
 
 The core insight: **AI doesn't generate architecture — it generates code. Architecture has to be defined first, then enforced as constraints.**
 
-This repository is that constraint layer. It contains markdown specification files that are uploaded to Databricks Genie Code. Combined with the activation prompt below, Genie generates production-ready Python applications that always respect your platform standards: Medallion layers, Unity Catalog governance, semantic layer KPIs, and the [ai-dev-kit](https://github.com/databricks/ai-dev-kit) component library.
+This repository is that constraint layer. It contains markdown specification files that are deployed into the Databricks workspace filesystem, where Genie Code automatically picks them up as persistent instructions. Every generated app then respects your platform standards: Medallion layers, Unity Catalog governance, semantic layer KPIs, and the [ai-dev-kit](https://github.com/databricks/ai-dev-kit) component library.
 
 At Alpura, this system produced **90+ apps** across Finance, Sales, Operations, and Marketing — most in days, some in hours.
 
@@ -66,47 +66,110 @@ When Genie processes multiple files, this priority order applies:
 
 ---
 
+## How Genie Code Reads Constraints
+
+Genie Code does **not** accept `.md` file uploads in chat (only images can be attached there). Instead, constraints are loaded from specific files in the **Databricks workspace filesystem**. Genie Code reads these automatically — no chat attachment needed.
+
+There are three mechanisms, from broadest to narrowest scope:
+
+| Mechanism | File | Location in workspace | Scope |
+|-----------|------|-----------------------|-------|
+| Workspace instructions (admin) | `.assistant_workspace_instructions.md` | `Workspace/` root | All users, all sessions |
+| User instructions | `.assistant_instructions.md` | `/Users/<your-email>/` | Your sessions only |
+| Project instructions | `AGENTS.md` | Any project folder | Notebooks in that folder subtree |
+
+**Limit:** All instruction files are capped at 20,000 characters (the combined factory files are well under this).
+
+---
+
 ## Quick Start: Run the Example
 
 This walks you through deploying the **DBU Spend Monitor** — a working app that visualizes Databricks Unit consumption over time and by cluster, reading from `system.billing.usage`.
 
 ### Prerequisites
 
-- Active Databricks workspace with Unity Catalog enabled
-- Access to `system.billing.usage` (requires `system` catalog access)
-- Databricks Genie with Genie Code enabled
+- Databricks workspace with Unity Catalog enabled
+- Access to `system.billing.usage` (requires `system` catalog read permission)
+- Genie Code enabled in your workspace
 
-### Step 1 — Upload constraint files
+### Step 1 — Deploy the constraint files into your workspace
 
-In your Databricks workspace, open **Genie** and create a new conversation. Upload these five files:
+**Option A — Workspace-wide (recommended for teams, requires admin)**
 
-1. `GLOBAL_RULES.md`
-2. `STACK.md`
-3. `modules/data_access.md`
-4. `modules/ui_patterns.md`
-5. `apps/dbu_spend_app/APP.md`
+In the Databricks workspace file browser, create the file:
+```
+Workspace/.assistant_workspace_instructions.md
+```
+Paste the combined contents of `GLOBAL_RULES.md`, `STACK.md`, `modules/data_access.md`, and `modules/ui_patterns.md` into it in that order.
 
-### Step 2 — Paste the activation prompt
+**Option B — Personal (no admin needed)**
+
+Open Genie Code → click the settings gear → **Add instructions file**. This creates:
+```
+/Users/<your-email>/.assistant_instructions.md
+```
+Paste the same combined content into it.
+
+**Option C — Project-scoped**
+
+In your Databricks workspace, create a project folder and add a file named `AGENTS.md` inside it. Paste the combined constraint content there. Genie Code will apply it automatically to any notebook opened inside that folder.
+
+---
+
+### Step 2 — Open a notebook and run the activation prompt
+
+In a Databricks notebook (inside your project folder if using Option C), open Genie Code and paste:
 
 ```
-Load all uploaded markdown files as constraints.
+Apply all constraints from the instructions file already loaded.
 
 Respect this priority:
-1. GLOBAL_RULES.md
-2. STACK.md
-3. modules/*
-4. APP.md
+1. GLOBAL_RULES
+2. STACK
+3. Data access and UI modules
+4. The app spec below
 
 Use components and patterns from:
 https://github.com/databricks/ai-dev-kit
 
 Task:
-Build and deploy the application defined in APP.md.
+Build and deploy the following app.
+
+--- APP SPEC ---
+
+APP NAME: DBU Spend Monitor
+
+Objective:
+Visualize DBU usage over time and by cluster.
+
+Data:
+- system.billing.usage
+
+Metrics:
+- total DBUs per day
+- total DBUs per cluster
+
+Transformations:
+- group by usage_date -> sum(dbus)
+- group by cluster_id -> sum(dbus)
+
+UI:
+- Line chart (DBUs over time)
+- Bar chart (DBUs by cluster)
+
+Filters:
+- Date range
+
+Constraints:
+- Use Plotly for charts
+- Convert to pandas only in UI layer
+- No SQL outside data access module
+
+--- END SPEC ---
 
 Rules:
-- Do not redefine stack
-- Do not redefine architecture
-- Follow constraints strictly
+- Do not redefine stack or architecture
+- Follow all constraints strictly
 
 Return only the deployed application details.
 ```
