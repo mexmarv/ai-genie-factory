@@ -1,0 +1,121 @@
+# AI Genie Factory — Constraints
+
+<!-- Place this file as AGENTS.md in your Databricks workspace project folder.
+     Genie Code will load it automatically for all notebooks in that folder. -->
+
+---
+
+## GLOBAL RULES
+
+All applications must:
+
+- Run on Databricks (Databricks Apps for web apps, Notebooks for exploratory, DLT for pipelines)
+- Read only from Gold layer Unity Catalog tables in UI-facing apps
+- Reference all tables using three-part naming: catalog.schema.table
+- Separate data, logic, and UI into distinct layers — no layer may contain logic from another
+- Use ai-dev-kit patterns and components (https://github.com/databricks/ai-dev-kit)
+- Define all data access via spark.table() in the data access module
+- Apply central KPI definitions from the semantic layer — never recalculate a KPI that exists in the platform
+- Respect Unity Catalog RBAC/ACLs — never bypass access controls
+
+Architecture layers:
+
+- Data layer: spark.table() reads only, Unity Catalog three-part names, no transformation logic
+- Logic layer: aggregations, transformations, business rules — no SQL, no UI dependencies
+- UI layer: Plotly charts using approved patterns, pandas conversion happens here only
+
+Forbidden:
+
+- Business logic in UI layer
+- SQL outside the data access module
+- Hardcoded values (catalog names, table names, thresholds)
+- Reading from Bronze or Silver tables in UI-facing apps
+- Redefining KPIs that exist in the semantic layer
+- Custom components that duplicate ai-dev-kit patterns
+- Bypassing Unity Catalog governance
+
+---
+
+## STACK
+
+Runtime:
+- Databricks (unified platform for all workloads)
+- Databricks Apps for web application deployment
+- Delta Live Tables (DLT) for pipeline workloads
+
+Language:
+- Python
+
+UI:
+- Plotly (plotly.express) for all charts and visualizations
+
+Data Access:
+- spark.table() for all reads
+- Unity Catalog three-part table names: catalog.schema.table
+- Gold layer tables only in UI-facing apps
+- Delta Lake as the table format
+
+Data Architecture:
+- Medallion: Bronze (raw ingestion) → Silver (validated, SCD Type 2) → Gold (aggregated, app-ready)
+- Gold tables are materialized views or Photon-optimized Delta tables with star schema
+- Semantic layer via dbxs metrics registered in Unity Catalog metrics store
+
+Governance:
+- Unity Catalog for lineage, access control, and discoverability
+- RBAC with attribute-based policies
+- Column-level lineage and impact analysis via Unity Catalog
+
+Libraries:
+- ai-dev-kit: https://github.com/databricks/ai-dev-kit
+
+---
+
+## DATA ACCESS
+
+All data access must be defined in the data access module. No other layer may read from tables directly.
+
+Rules:
+- Use spark.table() for all reads
+- Always use three-part Unity Catalog naming: catalog.schema.table
+- Read from Gold layer tables in UI-facing apps
+- No SQL, no JDBC, no hardcoded table paths
+
+Pattern:
+df = spark.table("catalog.schema.table")
+
+Example (system catalog — available in all workspaces):
+df = spark.table("system.billing.usage")
+
+Example (Gold table):
+df = spark.table("prod.gold.sales_daily")
+
+Filtering (do it here, before passing to the logic layer):
+df = spark.table("prod.gold.sales_daily").filter("usage_date >= '2024-01-01'")
+
+---
+
+## UI PATTERNS
+
+All UI must use Plotly (plotly.express). No other charting library.
+
+Rules:
+- Convert Spark DataFrames to pandas only in this layer (never in data or logic layers)
+- Use ai-dev-kit layout components for app shell, filters, and layout
+- Keep chart functions pure: accept a pandas DataFrame, return a Plotly figure
+- If the app spec specifies a chart type, use it exactly
+- If the app spec does not specify a chart type, choose the most appropriate Plotly chart for the data and metric
+
+Chart type guidance (use judgment when not specified):
+- Trends over time → px.line
+- Comparisons by category → px.bar
+- Part-of-whole → px.pie or px.treemap
+- Distribution → px.histogram or px.box
+- Correlation → px.scatter
+- Ranked lists → px.bar (horizontal)
+
+Pandas conversion (UI layer only):
+df_pandas = df.toPandas()
+
+Filter pattern (date range):
+df_filtered = df.filter((col("date_col") >= start_date) & (col("date_col") <= end_date))
+# Convert to pandas after filtering, not before
