@@ -92,27 +92,13 @@ This walks you through deploying the **DBU Spend Monitor** — a working app tha
 - Access to `system.billing.usage` (requires `system` catalog read permission)
 - Genie Code enabled in your workspace
 
-### Step 1 — Deploy the constraint files into your workspace
+### Step 1 — Add AGENTS.md to your Databricks workspace project folder
 
-**Option A — Workspace-wide (recommended for teams, requires admin)**
+In the Databricks workspace file browser, create a project folder (e.g. `dbu-spend-app`) and upload or create a file named `AGENTS.md` inside it. Paste the full contents of [`AGENTS.md`](./AGENTS.md) from this repository into it.
 
-In the Databricks workspace file browser, create the file:
-```
-Workspace/.assistant_workspace_instructions.md
-```
-Paste the combined contents of `GLOBAL_RULES.md`, `STACK.md`, `modules/data_access.md`, and `modules/ui_patterns.md` into it in that order.
+Genie Code automatically discovers this file and loads it as constraints for every notebook opened inside that folder. No settings changes or admin access needed.
 
-**Option B — Personal (no admin needed)**
-
-Open Genie Code → click the settings gear → **Add instructions file**. This creates:
-```
-/Users/<your-email>/.assistant_instructions.md
-```
-Paste the same combined content into it.
-
-**Option C — Project-scoped**
-
-In your Databricks workspace, create a project folder and add a file named `AGENTS.md` inside it. Paste the combined constraint content there. Genie Code will apply it automatically to any notebook opened inside that folder.
+> **Want workspace-wide coverage?** A workspace admin can paste the same content into `Workspace/.assistant_workspace_instructions.md` to apply the constraints to all users. Or open Genie Code → settings gear → **Add instructions file** to apply them to your own sessions only.
 
 ---
 
