@@ -167,7 +167,15 @@ Do not redefine stack or architecture. Follow all constraints strictly.
 Return only the deployed application details.
 ```
 
-### Step 3 — Review the output
+### Step 3 — Allow the file write
+
+Genie Code will warn: **"Code execution blocked for safety reasons: the code writes a Python file to a path under /Workspace/Users."**
+
+This is expected. Genie is writing the generated app files (e.g. `logic.py`, `app.py`) to the workspace so they can be deployed as a Databricks App — that is exactly what you want. **Click bypass/allow to continue.**
+
+This warning is a Databricks safety gate on workspace file writes, not a constraint violation. Your constraints have nothing to do with it.
+
+### Step 4 — Review the output
 
 Genie Code will generate and deploy a Databricks App with:
 - Line chart: DBU usage over time (grouped by `usage_date`)
@@ -215,16 +223,22 @@ The loaded constraints already enforce Gold tables, three-layer separation, Plot
 
 ## Extending the Factory
 
-When you update any source file, reflect the change in `AGENTS.md` so what's loaded into Genie Code stays in sync.
+When you update any source file, run `build_agents.py` to rebuild `AGENTS.md` and keep what's loaded into Genie Code in sync:
+
+```bash
+python3 build_agents.py
+```
+
+This overwrites `AGENTS.md` with the combined contents of all constraint files and prints the character count against the 20,000-character limit.
 
 ### Add a new data access pattern
-Edit `modules/data_access.md` — add new `spark.table()` patterns reusable across apps. Update the corresponding section in `AGENTS.md`.
+Edit `modules/data_access.md` — add new `spark.table()` patterns reusable across apps. Then run `python3 build_agents.py`.
 
 ### Add a new chart type
-Edit `modules/ui_patterns.md` — add new Plotly chart types compatible with the stack. Update `AGENTS.md`.
+Edit `modules/ui_patterns.md` — add new Plotly chart types compatible with the stack. Then run `python3 build_agents.py`.
 
 ### Add a global architecture rule
-Edit `GLOBAL_RULES.md` — only for platform-wide rules that apply to every future app. Update `AGENTS.md`.
+Edit `GLOBAL_RULES.md` — only for platform-wide rules that apply to every future app. Then run `python3 build_agents.py`.
 
 ---
 
