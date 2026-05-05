@@ -87,8 +87,8 @@ This deploys the **DBU Spend Monitor** — a working app that visualizes Databri
 ### Prerequisites
 
 - Databricks workspace with Unity Catalog enabled
-- Access to `system.billing.usage` (requires `system` catalog read permission)
 - Genie Code enabled in your workspace
+- **System tables access enabled** — a workspace admin must enable system tables under *Settings → System tables*. Without this, `system.billing.usage` will be empty or inaccessible. See [Enable system tables](https://docs.databricks.com/aws/en/admin/system-tables/index.html).
 
 ---
 
