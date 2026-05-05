@@ -94,9 +94,11 @@ This walks you through deploying the **DBU Spend Monitor** — a working app tha
 
 ### Step 1 — Load the constraints into Genie Code (one-time setup)
 
-Open Genie Code in your Databricks workspace. Click the **settings gear** → **Add instructions file**.
+1. Click the **Genie Code sparkle icon** (upper-right corner of your workspace) to open the Genie Code pane.
+2. Inside the pane, click the **gear icon** to open Genie Code settings.
+3. Under **User instructions**, click **Add instructions file**.
 
-This creates the file `/Users/<your-email>/.assistant_instructions.md` and opens it for editing. Paste the full contents of [`AGENTS.md`](./AGENTS.md) from this repository into it and save.
+This creates `/Users/<your-email>/.assistant_instructions.md` and opens it in a new tab. Paste the full contents of [`AGENTS.md`](./AGENTS.md) from this repository into it and save. Limit is 20,000 characters — the factory constraints are well under that.
 
 From this point on, every Genie Code session you open will automatically apply these constraints — no need to repeat this step for future apps.
 
