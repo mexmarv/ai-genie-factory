@@ -28,6 +28,7 @@ SOURCES = [
     ("UI PATTERNS",     ROOT / "modules" / "ui_patterns.md"),
     ("DLT PIPELINES",   ROOT / "modules" / "dlt_pipeline.md"),
     ("TESTING",         ROOT / "modules" / "testing.md"),
+    ("UX/UI DESIGN",     ROOT / "modules" / "ux_design.md"),
 ]
 
 HEADER = """\
