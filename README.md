@@ -61,9 +61,17 @@ ai-genie-factory/
 │   ├── PROMPT_TEMPLATE.md           ← Exact prompt structure for every Genie Code session
 │   └── APP_TEMPLATE.md              ← Blank APP spec — fill this out per app
 │
-└── apps/
-    └── dbu_spend_app/
-        └── APP.md                   ← Working example: DBU Spend Monitor
+├── apps/
+│   └── dbu_spend_app/
+│       └── APP.md                   ← Working example: DBU Spend Monitor
+│
+└── skills/
+    ├── databricks-app-design.skill  ← Installable skill file (upload to Claude)
+    └── databricks-app-design/
+        ├── SKILL.md                 ← UX/UI design system for all Databricks Apps
+        └── references/
+            ├── dash_patterns.md     ← Full Dash app shell + callback patterns
+            └── streamlit_patterns.md ← Streamlit equivalent patterns
 ```
 
 ### Constraint Priority
@@ -213,12 +221,33 @@ This app visualizes Databricks Unit consumption over time and by cluster using `
 
 ---
 
+## Claude Skills
+
+The `skills/` directory contains installable `.skill` files that encode design systems and patterns for use directly in Claude.ai or Databricks Genie Code.
+
+### databricks-app-design
+
+Encodes the Alpura UX/UI design system — dark theme tokens, layout order, KPI card patterns, chart color sequences, Dash and Streamlit component structures. Once installed, Claude automatically applies it whenever generating or reviewing `ui.py` or `app.py`.
+
+**Install in Claude.ai:**
+1. Download `skills/databricks-app-design.skill`
+2. Go to **Claude.ai → Settings → Skills → Add skill**
+3. Upload the `.skill` file
+
+**Install in Databricks Genie Code:**
+1. Open Genie Code (sparkle icon, top-right of workspace)
+2. Click **gear icon ⚙️ → Skills → Add skill**
+3. Upload `databricks-app-design.skill`
+
+---
+
 ## Contributing
 
 1. Edit source files (`GLOBAL_RULES.md`, `STACK.md`, `modules/*.md`)
 2. Run `python build_agents.py` to regenerate `AGENTS.md`
 3. Never edit `AGENTS.md` directly — it's generated
 4. Add new apps under `apps/<app-name>/APP.md`
+5. Add new skills under `skills/<skill-name>/SKILL.md`
 
 ---
 
