@@ -67,6 +67,9 @@ ai-genie-factory/
 │   ├── PROMPT_TEMPLATE.md             ← Exact prompt for every Genie Code session
 │   └── APP_TEMPLATE.md                ← Blank APP spec — fill this out per app
 │
+├── docs/
+│   └── index.html                     ← GitHub Pages landing page
+│
 └── apps/
     ├── nyc_taxi_explorer/
     │   └── APP.md                     ← Zero-permission starter: samples.nyctaxi.trips
