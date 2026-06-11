@@ -42,6 +42,7 @@ ai-genie-factory/
 ├── GLOBAL_RULES.md                    ← Platform law (never override)
 ├── STACK.md                           ← Technology choices (never override)
 ├── build_agents.py                    ← Assembles AGENTS.md from core modules only
+├── deploy.sh                          ← Deploys instructions + skills via Databricks CLI
 │
 ├── modules/                           ← Source files compiled into AGENTS.md
 │   ├── error_handling.md              ← try/except contracts, custom exceptions
@@ -106,45 +107,53 @@ ai-genie-factory/
 
 ## Setup: One-Time Deployment
 
-### Step 1 — Load AGENTS.md into Genie Code instructions
+### Prerequisites
 
-1. Open **Genie Code** (sparkle icon, top-right of Databricks workspace)
-2. Click **gear icon ⚙️ → User instructions → Add instructions file**
-3. This creates `/Users/<your-email>/.assistant/instructions.md`
-4. **Paste the entire contents of `AGENTS.md` into that file and save**
-
-> **Workspace-wide:** Admin pastes the same into `Workspace/.assistant/instructions.md`
+- [Databricks CLI v0.200+](https://docs.databricks.com/dev-tools/cli/install.html) installed and configured
+- Run `databricks auth login` if you haven't set up a profile yet
 
 ---
 
-### Step 2 — Deploy skills to Databricks workspace
+### Step 1 — Deploy instructions + skills via `deploy.sh`
 
-Skills live at `Workspace/.assistant/skills/` (workspace) or `/Users/<email>/.assistant/skills/` (personal).
+From the repo root, run:
 
-**Option A — Databricks CLI (recommended):**
 ```bash
-# From repo root — deploy all skills workspace-wide (requires admin)
-for skill in skills/*/; do
-  skill_name=$(basename "$skill")
-  databricks workspace import-dir "$skill" \
-    "/Workspace/.assistant/skills/${skill_name}" --overwrite
-done
+# Deploy to your personal Genie Code folder (default)
+./deploy.sh
 
-# Or deploy to your personal skills folder
-for skill in skills/*/; do
-  skill_name=$(basename "$skill")
-  databricks workspace import-dir "$skill" \
-    "/Users/<your-email>/.assistant/skills/${skill_name}" --overwrite
-done
+# Deploy workspace-wide so all users get the skills (requires admin)
+./deploy.sh --workspace
+
+# Use a specific ~/.databrickscfg profile
+./deploy.sh --profile my-profile
 ```
 
-**Option B — Databricks workspace UI:**
-1. Open **Workspace** in the left sidebar
-2. Navigate to `.assistant/skills/` (create it if it doesn't exist)
-3. Create a folder for each skill (e.g., `databricks-app-design`)
-4. Upload the `SKILL.md` and any reference files into each folder
+The script uploads:
+- `AGENTS.md` → `.assistant/instructions.md` (Genie Code reads this as your instructions file)
+- Each `skills/<name>/` folder → `.assistant/skills/<name>/` (SKILL.md + any reference files)
 
-Genie Code picks up skills automatically the next time you open it in Agent mode.
+> **What `import-dir` can't do:** The Databricks CLI's `import-dir` only handles notebooks (`.py`, `.sql`, `.ipynb`). Plain `.md` skill files must be uploaded as raw files — `deploy.sh` handles this automatically using `databricks workspace import --format RAW`.
+
+**Redeploying after edits:**
+```bash
+# After editing AGENTS.md or any skill, just re-run:
+./deploy.sh
+```
+
+---
+
+### Step 2 — Verify in Genie Code
+
+1. Open **Genie Code** in Databricks (sparkle icon, top-right)
+2. Click **⚙️ → User instructions** — `instructions.md` should appear loaded
+3. Switch to **Agent mode** and @mention any skill to confirm it's available:
+   ```
+   @databricks-app-design  @data-access  @dlt-pipeline
+   @ui-patterns  @testing-scaffold
+   ```
+
+Genie Code picks up skills automatically — no restart needed.
 
 ---
 
@@ -235,7 +244,7 @@ See `apps/dbu_spend_app/APP.md` — reads `system.billing.usage`, available in e
 ## Contributing
 
 1. Edit `GLOBAL_RULES.md`, `STACK.md`, or `modules/*.md` → run `python build_agents.py`
-2. Edit skills in `skills/<name>/SKILL.md` → redeploy that skill folder to the workspace
+2. Edit skills in `skills/<name>/SKILL.md` → run `./deploy.sh` to push changes
 3. Never edit `AGENTS.md` directly — it's generated
 4. Add new apps under `apps/<app-name>/APP.md`
 
