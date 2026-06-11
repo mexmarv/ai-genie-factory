@@ -68,6 +68,8 @@ ai-genie-factory/
 │   └── APP_TEMPLATE.md                ← Blank APP spec — fill this out per app
 │
 └── apps/
+    ├── nyc_taxi_explorer/
+    │   └── APP.md                     ← Zero-permission starter: samples.nyctaxi.trips
     └── dbu_spend_app/
         └── APP.md                     ← Working example: DBU Spend Monitor
 ```
@@ -235,9 +237,14 @@ Output:
 
 ---
 
-## Example App: DBU Spend Monitor
+## Example Apps
 
-See `apps/dbu_spend_app/APP.md` — reads `system.billing.usage`, available in every workspace with system tables enabled.
+| App | Table | Permissions needed |
+|-----|-------|-------------------|
+| [NYC Taxi Explorer](apps/nyc_taxi_explorer/APP.md) | `samples.nyctaxi.trips` | None — works in every Unity Catalog workspace out of the box |
+| [DBU Spend Monitor](apps/dbu_spend_app/APP.md) | `system.billing.usage` | Requires system tables enabled by an admin |
+
+**Start with NYC Taxi Explorer** to verify the factory is wired up before building on your own data.
 
 ---
 
