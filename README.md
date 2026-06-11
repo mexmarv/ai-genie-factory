@@ -3,6 +3,8 @@
 **by Marvin Nahmias & Javier Hauss — Alpura, Mexico City**
 *Premiering at DATA+AI Summit 2026*
 
+**[mexmarv.github.io/ai-genie-factory](https://mexmarv.github.io/ai-genie-factory)**
+
 [![Built on Databricks](https://img.shields.io/badge/Built%20on-Databricks-FF3621?style=flat&logo=databricks&logoColor=white)](https://github.com/databricks)
 [![Genie Code](https://img.shields.io/badge/Powered%20by-Genie%20Code-00bcd4?style=flat&logo=databricks&logoColor=white)](https://www.databricks.com/product/databricks-assistant)
 [![DATA+AI Summit 2026](https://img.shields.io/badge/DATA%2BAI%20Summit-2026-7c4dff?style=flat)](https://dataaisummit.com)
