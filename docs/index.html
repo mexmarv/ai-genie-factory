@@ -75,6 +75,26 @@
       cursor: pointer;
     }
     .nav-gh:hover { border-color: var(--teal); background: var(--card2); }
+    .nav-partners {
+      display: flex; align-items: center; gap: .85rem;
+      padding: 0 1rem; border-left: 1px solid var(--border2); border-right: 1px solid var(--border2);
+    }
+    .nav-partner-logo {
+      height: 22px; width: auto; display: block;
+      opacity: .85; transition: opacity .2s;
+      border-radius: 4px;
+    }
+    .nav-partner-logo:hover { opacity: 1; }
+    .nav-db-badge {
+      display: flex; align-items: center; gap: .35rem;
+      text-decoration: none;
+    }
+    .nav-db-badge img { height: 20px; width: auto; opacity: .85; transition: opacity .2s; }
+    .nav-db-badge:hover img { opacity: 1; }
+    .nav-db-badge span {
+      font-size: .8rem; font-weight: 700; color: #FF3621;
+      font-family: var(--font-head); letter-spacing: -.01em;
+    }
 
     /* ── HERO ────────────────────────────────────────── */
     #hero {
@@ -548,6 +568,7 @@
     /* ── RESPONSIVE ──────────────────────────────────── */
     @media (max-width: 768px) {
       .nav-links a:not(.nav-gh) { display: none; }
+      .nav-partners { display: none; }
       .compare-grid, .setup-grid, .apps-grid { grid-template-columns: 1fr; }
       .skills-grid { grid-template-columns: 1fr 1fr; }
       .hero-stats { gap: .6rem; }
@@ -589,6 +610,15 @@
     <a href="#skills">Skills</a>
     <a href="#setup">Setup</a>
     <a href="#apps">Examples</a>
+    <div class="nav-partners" aria-label="Built at Alpura · Powered by Databricks">
+      <a href="https://alpura.com" target="_blank" rel="noopener" title="Alpura">
+        <img src="https://logo.clearbit.com/alpura.com" alt="Alpura" class="nav-partner-logo">
+      </a>
+      <a href="https://databricks.com" target="_blank" rel="noopener" class="nav-db-badge" title="Databricks">
+        <img src="https://cdn.simpleicons.org/databricks/FF3621" alt="Databricks">
+        <span>Databricks</span>
+      </a>
+    </div>
     <a href="https://github.com/mexmarv/ai-genie-factory" target="_blank" rel="noopener" class="nav-gh">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
         <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
@@ -606,6 +636,29 @@
     <div class="hero-badge" role="text">
       <span class="dot" aria-hidden="true"></span>
       Presented at DATA+AI Summit 2026
+    </div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:1.25rem;margin-bottom:1.75rem;flex-wrap:wrap">
+      <a href="https://alpura.com" target="_blank" rel="noopener"
+         style="display:flex;align-items:center;gap:.5rem;text-decoration:none;
+                background:rgba(255,255,255,.05);border:1px solid var(--border);
+                border-radius:8px;padding:.45rem .85rem;transition:border-color .2s"
+         onmouseover="this.style.borderColor='rgba(255,255,255,.25)'"
+         onmouseout="this.style.borderColor='var(--border)'">
+        <img src="https://logo.clearbit.com/alpura.com" alt="Alpura"
+             style="height:24px;width:auto;border-radius:3px">
+        <span style="font-size:.82rem;color:var(--muted);font-weight:600">Alpura</span>
+      </a>
+      <span style="color:var(--border);font-size:.9rem" aria-hidden="true">×</span>
+      <a href="https://databricks.com" target="_blank" rel="noopener"
+         style="display:flex;align-items:center;gap:.5rem;text-decoration:none;
+                background:rgba(255,54,33,.06);border:1px solid rgba(255,54,33,.2);
+                border-radius:8px;padding:.45rem .85rem;transition:border-color .2s"
+         onmouseover="this.style.borderColor='rgba(255,54,33,.5)'"
+         onmouseout="this.style.borderColor='rgba(255,54,33,.2)'">
+        <img src="https://cdn.simpleicons.org/databricks/FF3621" alt="Databricks"
+             style="height:22px;width:auto">
+        <span style="font-size:.82rem;color:#FF3621;font-weight:700;font-family:var(--font-head)">Databricks</span>
+      </a>
     </div>
     <h1>
       <span class="grad-text">AI Genie Factory</span>
