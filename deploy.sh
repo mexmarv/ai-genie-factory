@@ -48,6 +48,12 @@ upload_file() {
 echo "── Step 1: Upload AGENTS.md as instructions.md ──"
 $CLI workspace mkdirs "$TARGET_BASE" 2>/dev/null || true
 upload_file "AGENTS.md" "$INSTRUCTIONS_TARGET"
+
+# Workspace-wide: also upload to the top-level workspace instructions path
+# Databricks Genie Code reads this for the "Workspace instructions" panel
+if [[ "$TARGET_BASE" == "$WORKSPACE_BASE" ]]; then
+  upload_file "AGENTS.md" "/Workspace/.assistant_workspace_instructions.md"
+fi
 echo ""
 
 # ── 2. Skills ─────────────────────────────────────────────────────────────────
