@@ -56,20 +56,12 @@ ai-genie-factory/
 │   ├── error_handling.md              ← try/except contracts, custom exceptions
 │   └── logging.md                     ← Structured logging standard (_logger.py)
 │
-├── skills/                            ← Databricks Genie Code Agent skills
-│   ├── databricks-app-design/         ← @databricks-app-design
-│   │   ├── SKILL.md                   ← UX/UI tokens, Plotly theme, layout, KPI cards
-│   │   └── references/
-│   │       ├── dash_patterns.md       ← Full Dash app shell + callback patterns
-│   │       └── streamlit_patterns.md  ← Streamlit equivalent patterns
-│   ├── data-access/                   ← @data-access
-│   │   └── SKILL.md                   ← spark.table(), Unity Catalog, DataAccessError
-│   ├── dlt-pipeline/                  ← @dlt-pipeline
-│   │   └── SKILL.md                   ← Bronze/Silver/Gold, Auto Loader, expectations
-│   ├── testing-scaffold/              ← @testing-scaffold
-│   │   └── SKILL.md                   ← pytest, mocked Spark, pandas logic tests
-│   └── ui-patterns/                   ← @ui-patterns
-│       └── SKILL.md                   ← Plotly chart functions, pandas conversion rules
+├── skills/                            ← Databricks Genie Code Agent skills (flat .md files)
+│   ├── databricks-app-design.md       ← @databricks-app-design — UX/UI tokens, Plotly theme, Dash + Streamlit patterns
+│   ├── data-access.md                 ← @data-access — spark.table(), Unity Catalog, DataAccessError
+│   ├── dlt-pipeline.md                ← @dlt-pipeline — Bronze/Silver/Gold, Auto Loader, expectations
+│   ├── testing-scaffold.md            ← @testing-scaffold — pytest, mocked Spark, pandas logic tests
+│   └── ui-patterns.md                 ← @ui-patterns — Plotly chart functions, pandas conversion rules
 │
 ├── templates/
 │   ├── PROMPT_TEMPLATE.md             ← Exact prompt for every Genie Code session
@@ -144,7 +136,7 @@ From the repo root, run:
 
 The script uploads:
 - `AGENTS.md` → `.assistant/instructions.md` (Genie Code reads this as your instructions file)
-- Each `skills/<name>/` folder → `.assistant/skills/<name>/` (SKILL.md + any reference files)
+- Each `skills/<name>.md` → `.assistant/skills/<name>.md`
 
 > **What `import-dir` can't do:** The Databricks CLI's `import-dir` only handles notebooks (`.py`, `.sql`, `.ipynb`). Plain `.md` skill files must be uploaded as raw files — `deploy.sh` handles this automatically using `databricks workspace import --format RAW`.
 
@@ -262,7 +254,7 @@ Output:
 ## Contributing
 
 1. Edit `GLOBAL_RULES.md`, `STACK.md`, or `modules/*.md` → run `python build_agents.py`
-2. Edit skills in `skills/<name>/SKILL.md` → run `./deploy.sh` to push changes
+2. Edit skills in `skills/<name>.md` → run `./deploy.sh` to push changes
 3. Never edit `AGENTS.md` directly — it's generated
 4. Add new apps under `apps/<app-name>/APP.md`
 
