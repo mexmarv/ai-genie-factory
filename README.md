@@ -57,9 +57,11 @@ ai-genie-factory/
 │   └── logging.md                     ← Structured logging standard (_logger.py)
 │
 ├── skills/                            ← Databricks Genie Code Agent skills (flat .md files)
-│   ├── ui-ux-patterns.md              ← @ui-ux-patterns — full design system + Plotly charts (tokens, shadows, typography, KPI cards, Dash + Streamlit shells)
+│   ├── ui-ux-patterns.md              ← @ui-ux-patterns — design tokens, shadows, typography, KPI cards, charts, Dash + Streamlit shells
+│   ├── databricks-app.md              ← @databricks-app — full app architecture, file layers, app.yaml, OAuth, deployment, debug
+│   ├── databricks-dashboard.md        ← @databricks-dashboard — AI/BI Lakeview dashboards, dataset SQL, widget config, filters, scheduling
+│   ├── dlt-pipeline.md                ← @dlt-pipeline — Bronze/Silver/Gold, Auto Loader, CDC, SCD2, schema evolution, streaming
 │   ├── data-access.md                 ← @data-access — spark.table(), Unity Catalog, DataAccessError
-│   ├── dlt-pipeline.md                ← @dlt-pipeline — Bronze/Silver/Gold, Auto Loader, expectations
 │   └── testing-scaffold.md            ← @testing-scaffold — pytest, mocked Spark, pandas logic tests
 │
 ├── templates/
@@ -100,11 +102,13 @@ ai-genie-factory/
 | 2 | `STACK.md` | Technology choices — never redefined per app |
 | 3 | `modules/error_handling.md` | Error contracts — never overridden |
 | 4 | `modules/logging.md` | Logging standard — never overridden |
-| 5 | `@data-access` skill | spark.table() patterns |
-| 6 | `@ui-ux-patterns` skill | Full UX/UI design system + Plotly charts |
-| 7 | `@dlt-pipeline` skill | Pipeline patterns |
-| 8 | `@testing-scaffold` skill | Test scaffold |
-| 10 | `APP.md` | App-specific spec — only what's unique to this app |
+| 5 | `@data-access` skill | spark.table(), Unity Catalog, DataAccessError |
+| 6 | `@ui-ux-patterns` skill | Design tokens, shadows, typography, charts, KPI cards |
+| 7 | `@databricks-app` skill | App file layers, app.yaml, OAuth, deployment |
+| 8 | `@databricks-dashboard` skill | AI/BI dashboard SQL, widgets, filters, scheduling |
+| 9 | `@dlt-pipeline` skill | Bronze/Silver/Gold, CDC, SCD2, streaming |
+| 10 | `@testing-scaffold` skill | pytest, mocked Spark, pandas logic tests |
+| 11 | `APP.md` | App-specific spec — only what's unique to this app |
 
 ---
 
@@ -152,8 +156,8 @@ The script uploads:
 2. Click **⚙️ → User instructions** — `instructions.md` should appear loaded
 3. Switch to **Agent mode** and @mention any skill to confirm it's available:
    ```
-   @ui-ux-patterns  @data-access  @dlt-pipeline
-   @ui-ux-patterns  @testing-scaffold
+   @ui-ux-patterns  @databricks-app  @databricks-dashboard
+   @dlt-pipeline  @data-access  @testing-scaffold
    ```
 
 Genie Code picks up skills automatically — no restart needed.
@@ -171,7 +175,8 @@ Copy `templates/APP_TEMPLATE.md` and fill in every field before prompting.
 Use `templates/PROMPT_TEMPLATE.md` as your prompt. Skills are loaded automatically, or `@mention` them:
 
 ```
-@ui-ux-patterns build the sales dashboard per the spec below
+@databricks-app @ui-ux-patterns build the sales dashboard per the spec below
+@databricks-dashboard build a native Lakeview dashboard for daily revenue
 @dlt-pipeline create the ingestion pipeline for the orders feed
 @testing-scaffold add tests to the app I just built
 ```
@@ -193,7 +198,8 @@ Output:
 
   Skills to deploy separately (copy to Workspace/.assistant/skills/):
     @data-access
-    @ui-ux-patterns
+    @databricks-app
+    @databricks-dashboard
     @dlt-pipeline
     @testing-scaffold
     @ui-ux-patterns

@@ -886,7 +886,7 @@
   <div class="section-inner">
     <div class="reveal">
       <span class="section-tag">Skills</span>
-      <h2>Five Specialist Agents</h2>
+      <h2>Six Specialist Agents</h2>
       <p class="section-lead">Each skill is a focused context file deployed to your Databricks workspace. @mention any skill in Genie Code Agent Mode to load its expertise.</p>
     </div>
     <div class="skills-grid">
@@ -911,16 +911,46 @@
             <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
           </svg>
         </div>
-        <div class="skill-mention" style="color:var(--purple)">@databricks-app-design</div>
-        <div class="skill-name">App Design</div>
-        <div class="skill-desc">UX/UI design system, Plotly dark theme, color tokens, KPI card layouts, Dash and Streamlit shell patterns.</div>
+        <div class="skill-mention" style="color:var(--purple)">@ui-ux-patterns</div>
+        <div class="skill-name">UX/UI Patterns</div>
+        <div class="skill-desc">Full design system — color tokens, shadow/elevation, Inter typography, KPI cards, Plotly dark theme, chart functions, Dash &amp; Streamlit shells.</div>
         <div class="skill-tags">
-          <span class="skill-tag">#0d1117</span>
+          <span class="skill-tag">Design Tokens</span>
           <span class="skill-tag">Plotly Dark</span>
           <span class="skill-tag">Dash / Streamlit</span>
         </div>
       </div>
       <div class="skill-card reveal" style="transition-delay:.14s">
+        <div class="skill-icon" style="background:rgba(0,188,212,.10);border-color:rgba(0,188,212,.2)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#00bcd4" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+            <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+          </svg>
+        </div>
+        <div class="skill-mention" style="color:#00bcd4">@databricks-app</div>
+        <div class="skill-name">Databricks App</div>
+        <div class="skill-desc">Full app architecture — data/logic/ui/app layers, app.yaml, service principal auth, OAuth token passthrough, deployment commands, debug checklist.</div>
+        <div class="skill-tags">
+          <span class="skill-tag">app.yaml</span>
+          <span class="skill-tag">OAuth</span>
+          <span class="skill-tag">Layer Architecture</span>
+        </div>
+      </div>
+      <div class="skill-card reveal" style="transition-delay:.18s">
+        <div class="skill-icon" style="background:rgba(0,112,224,.12);border-color:rgba(0,112,224,.2)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#0070e0" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+            <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 9v12"/><rect x="12" y="12" width="6" height="4" rx="1"/>
+          </svg>
+        </div>
+        <div class="skill-mention" style="color:#0070e0">@databricks-dashboard</div>
+        <div class="skill-name">AI/BI Dashboard</div>
+        <div class="skill-desc">Native Lakeview dashboards — dataset SQL, parameterized filters, counter/chart/table tiles, layout templates, refresh scheduling, widget config.</div>
+        <div class="skill-tags">
+          <span class="skill-tag">Lakeview</span>
+          <span class="skill-tag">Parameterized SQL</span>
+          <span class="skill-tag">AI/BI</span>
+        </div>
+      </div>
+      <div class="skill-card reveal" style="transition-delay:.21s">
         <div class="skill-icon" style="background:rgba(255,166,87,.12);border-color:rgba(255,166,87,.2)">
           <svg viewBox="0 0 24 24" fill="none" stroke="#ffa657" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
             <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
@@ -928,14 +958,14 @@
         </div>
         <div class="skill-mention" style="color:#ffa657">@dlt-pipeline</div>
         <div class="skill-name">DLT Pipeline</div>
-        <div class="skill-desc">Bronze/Silver/Gold medallion, Auto Loader, DLT expectations, streaming patterns. No spark.read() inside DLT notebooks.</div>
+        <div class="skill-desc">Bronze/Silver/Gold medallion, Auto Loader, CDC with APPLY CHANGES, SCD Type 2, schema evolution, streaming vs batch, pipeline settings.</div>
         <div class="skill-tags">
           <span class="skill-tag">Bronze/Silver/Gold</span>
+          <span class="skill-tag">CDC / SCD2</span>
           <span class="skill-tag">Auto Loader</span>
-          <span class="skill-tag">/Volumes/</span>
         </div>
       </div>
-      <div class="skill-card reveal" style="transition-delay:.21s">
+      <div class="skill-card reveal" style="transition-delay:.28s">
         <div class="skill-icon" style="background:rgba(63,185,80,.12);border-color:rgba(63,185,80,.2)">
           <svg viewBox="0 0 24 24" fill="none" stroke="#3fb950" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
             <polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
@@ -948,21 +978,6 @@
           <span class="skill-tag">pytest</span>
           <span class="skill-tag">Mocked Spark</span>
           <span class="skill-tag">logic.py</span>
-        </div>
-      </div>
-      <div class="skill-card reveal" style="transition-delay:.28s">
-        <div class="skill-icon" style="background:rgba(255,123,114,.12);border-color:rgba(255,123,114,.2)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="#ff7b72" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
-            <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
-          </svg>
-        </div>
-        <div class="skill-mention" style="color:#ff7b72">@ui-patterns</div>
-        <div class="skill-name">UI Patterns</div>
-        <div class="skill-desc">Plotly chart functions, pandas→Plotly conversion rules, toPandas() placement, chart type rules (no px.pie, use px.treemap).</div>
-        <div class="skill-tags">
-          <span class="skill-tag">Plotly</span>
-          <span class="skill-tag">px.treemap</span>
-          <span class="skill-tag">#00bcd4</span>
         </div>
       </div>
     </div>
@@ -989,7 +1004,7 @@
       <div class="step-card reveal" style="transition-delay:.08s">
         <div class="step-num">02</div>
         <div class="step-title">Deploy Skills</div>
-        <div class="step-desc">Push instructions and all 5 skills to your Databricks workspace with one command.</div>
+        <div class="step-desc">Push instructions and all 6 skills to your Databricks workspace with one command.</div>
         <div class="step-code">./deploy.sh</div>
       </div>
       <div class="step-card reveal" style="transition-delay:.16s">
