@@ -54,27 +54,10 @@ echo ""
 echo "── Step 2: Upload skills ──"
 $CLI workspace mkdirs "$SKILLS_TARGET" 2>/dev/null || true
 
-for skill_dir in skills/*/; do
-  skill_name=$(basename "$skill_dir")
-  skill_target="${SKILLS_TARGET}/${skill_name}"
-
-  $CLI workspace mkdirs "$skill_target" 2>/dev/null || true
-  echo "  [$skill_name]"
-
-  # Upload SKILL.md
-  if [[ -f "${skill_dir}SKILL.md" ]]; then
-    upload_file "${skill_dir}SKILL.md" "${skill_target}/SKILL.md"
-  fi
-
-  # Upload files in references/ subdirectory (if present)
-  if [[ -d "${skill_dir}references" ]]; then
-    refs_target="${skill_target}/references"
-    $CLI workspace mkdirs "$refs_target" 2>/dev/null || true
-    for ref_file in "${skill_dir}references/"*.md; do
-      [[ -f "$ref_file" ]] || continue
-      upload_file "$ref_file" "${refs_target}/$(basename "$ref_file")"
-    done
-  fi
+for skill_file in skills/*.md; do
+  [[ -f "$skill_file" ]] || continue
+  skill_name=$(basename "$skill_file" .md)
+  upload_file "$skill_file" "${SKILLS_TARGET}/${skill_name}.md"
 done
 
 echo ""
