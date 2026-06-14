@@ -57,11 +57,10 @@ ai-genie-factory/
 │   └── logging.md                     ← Structured logging standard (_logger.py)
 │
 ├── skills/                            ← Databricks Genie Code Agent skills (flat .md files)
-│   ├── databricks-app-design.md       ← @databricks-app-design — UX/UI tokens, Plotly theme, Dash + Streamlit patterns
+│   ├── ui-ux-patterns.md              ← @ui-ux-patterns — full design system + Plotly charts (tokens, shadows, typography, KPI cards, Dash + Streamlit shells)
 │   ├── data-access.md                 ← @data-access — spark.table(), Unity Catalog, DataAccessError
 │   ├── dlt-pipeline.md                ← @dlt-pipeline — Bronze/Silver/Gold, Auto Loader, expectations
-│   ├── testing-scaffold.md            ← @testing-scaffold — pytest, mocked Spark, pandas logic tests
-│   └── ui-patterns.md                 ← @ui-patterns — Plotly chart functions, pandas conversion rules
+│   └── testing-scaffold.md            ← @testing-scaffold — pytest, mocked Spark, pandas logic tests
 │
 ├── templates/
 │   ├── PROMPT_TEMPLATE.md             ← Exact prompt for every Genie Code session
@@ -102,10 +101,9 @@ ai-genie-factory/
 | 3 | `modules/error_handling.md` | Error contracts — never overridden |
 | 4 | `modules/logging.md` | Logging standard — never overridden |
 | 5 | `@data-access` skill | spark.table() patterns |
-| 6 | `@ui-patterns` skill | Plotly chart layer rules |
-| 7 | `@databricks-app-design` skill | UX/UI design system, color tokens |
-| 8 | `@dlt-pipeline` skill | Pipeline patterns |
-| 9 | `@testing-scaffold` skill | Test scaffold |
+| 6 | `@ui-ux-patterns` skill | Full UX/UI design system + Plotly charts |
+| 7 | `@dlt-pipeline` skill | Pipeline patterns |
+| 8 | `@testing-scaffold` skill | Test scaffold |
 | 10 | `APP.md` | App-specific spec — only what's unique to this app |
 
 ---
@@ -154,8 +152,8 @@ The script uploads:
 2. Click **⚙️ → User instructions** — `instructions.md` should appear loaded
 3. Switch to **Agent mode** and @mention any skill to confirm it's available:
    ```
-   @databricks-app-design  @data-access  @dlt-pipeline
-   @ui-patterns  @testing-scaffold
+   @ui-ux-patterns  @data-access  @dlt-pipeline
+   @ui-ux-patterns  @testing-scaffold
    ```
 
 Genie Code picks up skills automatically — no restart needed.
@@ -173,7 +171,7 @@ Copy `templates/APP_TEMPLATE.md` and fill in every field before prompting.
 Use `templates/PROMPT_TEMPLATE.md` as your prompt. Skills are loaded automatically, or `@mention` them:
 
 ```
-@databricks-app-design build the sales dashboard per the spec below
+@ui-ux-patterns build the sales dashboard per the spec below
 @dlt-pipeline create the ingestion pipeline for the orders feed
 @testing-scaffold add tests to the app I just built
 ```
@@ -195,10 +193,10 @@ Output:
 
   Skills to deploy separately (copy to Workspace/.assistant/skills/):
     @data-access
-    @databricks-app-design
+    @ui-ux-patterns
     @dlt-pipeline
     @testing-scaffold
-    @ui-patterns
+    @ui-ux-patterns
 ```
 
 ---
@@ -213,7 +211,7 @@ Output:
 2. LAYER VIOLATIONS
    □ spark.table() outside data.py?   → @data-access, move to data.py
    □ Business logic in ui.py?         → move to logic.py
-   □ toPandas() outside ui.py?        → @ui-patterns, move to ui.py
+   □ toPandas() outside ui.py?        → @ui-ux-patterns, move to ui.py
 
 3. TABLE NAMES
    □ All refs three-part (catalog.schema.table)?
@@ -228,7 +226,7 @@ Output:
    □ ui.py catches exceptions and shows _error_figure()?
 
 6. DESIGN SYSTEM
-   □ Background #0d1117, cards #161b22?  → @databricks-app-design
+   □ Background #0d1117, cards #161b22?  → @ui-ux-patterns
    □ All charts use plotly_dark template?
    □ No px.pie (use px.treemap), no #636efa (use #00bcd4)?
 
