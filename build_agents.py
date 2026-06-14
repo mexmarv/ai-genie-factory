@@ -13,9 +13,9 @@ Workspace deployment:
     or /Users/<email>/.assistant/instructions.md                     (you only)
 
 Skills deployment:
-    Copy each skills/<name>/ folder →
-    Workspace/.assistant/skills/<name>/   (workspace-wide)
-    /Users/<email>/.assistant/skills/<name>/   (personal)
+    Copy each skills/<name>.md →
+    Workspace/.assistant/skills/<name>.md   (workspace-wide)
+    /Users/<email>/.assistant/skills/<name>.md   (personal)
 """
 
 from pathlib import Path
@@ -82,9 +82,8 @@ def build():
     print("  Skills to deploy separately (copy to Workspace/.assistant/skills/):")
     skills_dir = ROOT / "skills"
     if skills_dir.exists():
-        for s in sorted(skills_dir.iterdir()):
-            if s.is_dir() and (s / "SKILL.md").exists():
-                print(f"    @{s.name}")
+        for s in sorted(skills_dir.glob("*.md")):
+            print(f"    @{s.stem}")
 
 if __name__ == "__main__":
     build()
