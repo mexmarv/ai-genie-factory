@@ -15,6 +15,9 @@ Apply to every native Databricks Lakeview Dashboard. These run directly in the D
 workspace — no Python app needed. Always read from Gold layer tables only.
 
 > Always load **@ui-ux-patterns** alongside this skill for color tokens and chart type rules.
+>
+> For **conversational / natural language** interfaces on top of Gold tables, use Genie Spaces
+> (managed via `manage_genie` MCP tool) instead of, or alongside, Lakeview Dashboards.
 
 ---
 
