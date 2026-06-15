@@ -23,13 +23,13 @@ Apply to every Databricks App (Dash or Streamlit) built at Alpura.
 ## Rules
 
 - Every app follows the 5-file layer architecture: `data.py / logic.py / ui.py / app.py / _logger.py`
-- `data.py` reads only — `spark.table()`, no SQL, no JDBC, no pandas reads
+- `data.py` reads only — `WorkspaceClient` + Statement Execution API; **NO `spark` session in Apps runtime**
 - `logic.py` transforms only — pandas DataFrames, no Spark, no UI imports
-- `ui.py` renders only — Plotly figures, Dash/Streamlit components, no Spark
+- `ui.py` renders only — Plotly figures, Dash/Streamlit components
 - `app.py` orchestrates — wires layers, defines layout and callbacks
 - `_logger.py` is the only logging import — never use `print()` or raw `logging`
-- All table names come from the `CONFIG` dict in `app.py` — never hardcoded in `data.py`
-- OAuth token passthrough is the default auth — never hardcode credentials
+- All table names and `warehouse_id` come from the `CONFIG` dict in `app.py` — never hardcoded in `data.py`
+- `WorkspaceClient()` with no arguments is the auth pattern — it auto-configures from the App runtime environment
 - Always include `requirements.txt` and `app.yaml`
 
 ---
@@ -55,32 +55,54 @@ my-app/
 ### data.py
 
 ```python
-"""Data layer — spark.table() reads and filters only. No transformations."""
-from pyspark.sql import functions as F
+"""Data layer — databricks-sdk Statement Execution API reads only. No Spark (not available in Apps runtime)."""
+import pandas as pd
+from databricks.sdk import WorkspaceClient
 from _logger import get_logger
+
 logger = get_logger(__name__)
+
 
 class DataAccessError(Exception):
     pass
 
-def load_table(catalog: str, schema: str, table: str):
+
+def _execute_sql(sql: str, warehouse_id: str) -> pd.DataFrame:
+    """Run SQL via Statement Execution API; return a pandas DataFrame."""
+    w = WorkspaceClient()  # auto-configures from App runtime environment; no credentials needed
+    result = w.statement_execution.execute_statement(
+        warehouse_id=warehouse_id,
+        statement=sql,
+        wait_timeout="30s",
+    )
+    if result.status.state.value != "SUCCEEDED":
+        raise DataAccessError(f"Query failed: {result.status.error.message}")
+    cols = [c.name for c in result.manifest.schema.columns]
+    return pd.DataFrame(result.result.data_array or [], columns=cols)
+
+
+def load_table(catalog: str, schema: str, table: str, warehouse_id: str) -> pd.DataFrame:
     full_name = f"{catalog}.{schema}.{table}"
     try:
         logger.info(f"Loading {full_name}")
-        df = spark.table(full_name)
-        logger.info(f"Loaded {df.count()} rows from {full_name}")
+        df = _execute_sql(f"SELECT * FROM {full_name}", warehouse_id)
+        logger.info(f"Loaded {len(df)} rows from {full_name}")
         return df
+    except DataAccessError:
+        raise
     except Exception as e:
         logger.error(f"Failed to load {full_name}: {e}")
         raise DataAccessError(f"Table unavailable: {full_name}") from e
 
-def filter_by_date(df, col: str, start, end):
-    return df.filter((F.col(col) >= start) & (F.col(col) <= end))
 
-def filter_by_values(df, col: str, values: list):
+def filter_by_date(df: pd.DataFrame, col: str, start, end) -> pd.DataFrame:
+    return df[(df[col] >= start) & (df[col] <= end)]
+
+
+def filter_by_values(df: pd.DataFrame, col: str, values: list) -> pd.DataFrame:
     if not values or values == ["All"]:
         return df
-    return df.filter(F.col(col).isin(values))
+    return df[df[col].isin(values)]
 ```
 
 ### logic.py
@@ -163,6 +185,8 @@ command: ["python", "app.py"]       # Dash
 env:
   - name: DATABRICKS_HOST
     valueFrom: "databricks"         # injected by Databricks Apps runtime
+  - name: DATABRICKS_WAREHOUSE_ID
+    value: "your-sql-warehouse-id"  # replace with your Serverless or Pro warehouse ID
   - name: APP_ENV
     value: "production"
 
@@ -184,7 +208,7 @@ resources:
 dash==2.18.1
 plotly==5.24.1
 pandas==2.2.3
-databricks-sdk>=0.30.0
+databricks-sdk>=0.30.0   # WorkspaceClient + Statement Execution API — primary data access
 
 # Streamlit alternative
 # streamlit==1.41.0
@@ -194,38 +218,43 @@ python-dateutil>=2.9.0
 numpy>=1.26.0
 ```
 
+**Do NOT add** `pyspark` or `databricks-connect` — no Spark session is available in Apps runtime.
+
 Pin major versions. Never use `>=` for `dash` or `streamlit` — breaking changes between minors.
 
 ---
 
-## OAuth Token Passthrough
+## Auth in Databricks Apps
 
-Databricks Apps automatically injects the end-user's OAuth token. Use it to call Databricks APIs:
+Databricks Apps injects the runtime environment automatically. `WorkspaceClient()` with **no arguments** is the correct pattern — it reads `DATABRICKS_HOST` and authenticates via the App's service principal automatically.
 
 ```python
-# app.py — use the injected token, never hardcode credentials
-import os
+# data.py — WorkspaceClient() with no args; never pass token or host manually
 from databricks.sdk import WorkspaceClient
 
-def get_workspace_client() -> WorkspaceClient:
-    return WorkspaceClient(
-        host=os.environ["DATABRICKS_HOST"],
-        token=os.environ.get("DATABRICKS_TOKEN"),  # injected at runtime
-    )
+w = WorkspaceClient()  # correct — auto-configures from App runtime
 ```
 
-For `spark.table()` reads, token passthrough is automatic — Databricks Apps runs under the
-service principal assigned to the app. No additional auth code needed for Unity Catalog reads.
+**Do NOT do:**
+```python
+# Wrong — DATABRICKS_TOKEN may not be set in App runtime
+WorkspaceClient(host=os.environ["DATABRICKS_HOST"], token=os.environ.get("DATABRICKS_TOKEN"))
+```
+
+`DATABRICKS_TOKEN` is **not guaranteed** to be injected. The SDK's zero-argument `WorkspaceClient()` is the only reliable auth pattern in Apps runtime.
 
 ---
 
 ## CONFIG Pattern — app.py
 
 ```python
-# app.py — all table references live here, never in data.py
+# app.py — all table references and warehouse_id live here, never in data.py
+import os
+
 CONFIG = {
-    "catalog":  "prod",
-    "schema":   "gold",
+    "catalog":      "prod",
+    "schema":       "gold",
+    "warehouse_id": os.environ.get("DATABRICKS_WAREHOUSE_ID", ""),  # set in app.yaml env
     "tables": {
         "sales":     "sales_daily",
         "products":  "products",
@@ -317,11 +346,13 @@ databricks apps get my-app-name
    □ Check requirements.txt — all packages installable?
    □ databricks apps logs my-app-name — look for ImportError or SyntaxError
 
-2. SPARK TABLE NOT FOUND
+2. TABLE NOT FOUND / QUERY FAILED
    □ Three-part name correct? catalog.schema.table
+   □ DATABRICKS_WAREHOUSE_ID set in app.yaml? WorkspaceClient needs a warehouse
    □ Service principal has SELECT on that table?
-   □ Table exists: SHOW TABLES IN prod.gold
-   □ DataAccessError in logs?
+   □ Table exists: run SHOW TABLES IN prod.gold in a notebook
+   □ DataAccessError in logs? Check result.status.error.message
+   □ Do NOT use spark.table() — it will raise NameError in Apps runtime
 
 3. BLANK / BROKEN UI
    □ Callback returning correct types? (list for flex row, go.Figure for graph)
@@ -329,12 +360,14 @@ databricks apps get my-app-name
    □ CSS not loading? Check app.index_string has {%css%} in <head>
 
 4. SLOW / TIMING OUT
-   □ df.count() in load_table() — remove for large tables, use df.limit(1).count() to verify
-   □ toPandas() on unfiltered Spark DF — always filter before converting
-   □ Use Serverless compute for the app's SQL warehouse
+   □ SELECT * on large tables — add WHERE clause or LIMIT in the SQL string before calling execute_statement
+   □ Cold warehouse start — Serverless warehouses start faster than Classic; prefer Serverless
+   □ wait_timeout="30s" — increase to "50s" for slow warehouses; max is "50s"
 
 5. AUTH / PERMISSION ERROR
-   □ DATABRICKS_HOST set? Check os.environ in app startup log
+   □ Use WorkspaceClient() with NO arguments — it auto-configures in Apps runtime
+   □ Do NOT pass token= to WorkspaceClient — DATABRICKS_TOKEN is not guaranteed in Apps
+   □ DATABRICKS_HOST injected? It comes from valueFrom: "databricks" in app.yaml
    □ Service principal assigned to app in Databricks Apps settings?
    □ SP has USE CATALOG, USE SCHEMA, SELECT on required tables?
 ```
@@ -359,10 +392,11 @@ GRANT SELECT ON SCHEMA prod.gold TO `group:alpura-app-readers`;
 ## Forbidden
 
 - `print()` — always `logger.info/error`
-- `spark.sql("SELECT ...")` in data layer — use `spark.table()` + `.filter()`
-- `df.toPandas()` in `data.py` or `logic.py` — only in `ui.py`
-- Hardcoded catalog/schema/table strings outside `CONFIG`
-- `pd.read_csv()`, JDBC, or REST calls in `data.py`
+- `spark.table()` or `spark.sql()` in Databricks Apps — there is **no Spark session**; use `WorkspaceClient`
+- `pyspark` or `databricks-connect` in `requirements.txt` for Apps
+- `WorkspaceClient(token=...)` — do not pass a token; use `WorkspaceClient()` with no args
+- Hardcoded catalog/schema/table strings or `warehouse_id` outside `CONFIG`
+- `pd.read_csv()`, JDBC, or raw REST calls in `data.py`
 - Business logic in `ui.py` — aggregations go in `logic.py`
 - `debug=True` in production `app.run()`
 - Credentials, tokens, or passwords in any source file

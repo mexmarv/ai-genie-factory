@@ -3,7 +3,7 @@ ERROR HANDLING
 All applications must handle errors at layer boundaries and surface them clearly.
 
 Rules:
-- Wrap all spark.table() calls in try/except in the data layer
+- Wrap all data access calls in try/except in the data layer (spark.table() in Notebooks; WorkspaceClient in Apps)
 - Wrap all aggregation logic in try/except in the logic layer
 - Never let raw tracebacks reach the UI — display user-friendly messages
 - Always catch Exception as e — never use bare except:
@@ -17,10 +17,29 @@ class DataAccessError(Exception):
 class LogicError(Exception):
     pass
 
-Data layer pattern:
+Data layer pattern (Notebooks — spark.table()):
 try:
     df = spark.table("catalog.schema.table")
     logger.info(f"Loaded table: catalog.schema.table ({df.count()} rows)")
+except Exception as e:
+    logger.error(f"Failed to load catalog.schema.table: {e}")
+    raise DataAccessError(f"Table unavailable: catalog.schema.table") from e
+
+Data layer pattern (Databricks Apps — WorkspaceClient, NO spark):
+try:
+    w = WorkspaceClient()  # auto-configures from App runtime environment
+    result = w.statement_execution.execute_statement(
+        warehouse_id=warehouse_id,
+        statement="SELECT * FROM catalog.schema.table",
+        wait_timeout="30s",
+    )
+    if result.status.state.value != "SUCCEEDED":
+        raise DataAccessError(f"Query failed: {result.status.error.message}")
+    cols = [c.name for c in result.manifest.schema.columns]
+    df = pd.DataFrame(result.result.data_array or [], columns=cols)
+    logger.info(f"Loaded {len(df)} rows from catalog.schema.table")
+except DataAccessError:
+    raise
 except Exception as e:
     logger.error(f"Failed to load catalog.schema.table: {e}")
     raise DataAccessError(f"Table unavailable: catalog.schema.table") from e

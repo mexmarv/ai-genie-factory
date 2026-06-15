@@ -12,8 +12,9 @@ UI:
 - Plotly (plotly.express) for all charts and visualizations
 
 Data Access:
-- spark.table() for all reads
-- Unity Catalog three-part table names: catalog.schema.table
+- Notebooks and DLT: spark.table() for all reads
+- Databricks Apps: databricks-sdk WorkspaceClient + Statement Execution API (no Spark session in Apps runtime)
+- Unity Catalog three-part table names: catalog.schema.table in both runtimes
 - Gold layer tables only in UI-facing apps
 - Delta Lake as the table format
 

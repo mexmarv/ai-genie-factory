@@ -17,13 +17,13 @@ All applications must:
 - Reference all tables using three-part naming: catalog.schema.table
 - Separate data, logic, and UI into distinct layers — no layer may contain logic from another
 - Use ai-dev-kit patterns and components (https://github.com/databricks/ai-dev-kit)
-- Define all data access via spark.table() in the data access module
+- Data access by runtime: Notebooks and DLT use spark.table(); Databricks Apps use databricks-sdk WorkspaceClient + Statement Execution API (no Spark session available in Apps runtime)
 - Apply central KPI definitions from the semantic layer — never recalculate a KPI that exists in the platform
 - Respect Unity Catalog RBAC/ACLs — never bypass access controls or use service principals to elevate permissions
 
 Architecture layers:
 
-- Data layer: spark.table() reads only, Unity Catalog three-part names, no transformation logic
+- Data layer: Unity Catalog three-part names, no transformation logic — spark.table() in Notebooks/DLT; WorkspaceClient Statement Execution API in Databricks Apps
 - Logic layer: aggregations, transformations, business rules — no SQL, no UI dependencies
 - UI layer: Plotly charts using approved patterns, pandas conversion happens here only
 
@@ -53,8 +53,9 @@ UI:
 - Plotly (plotly.express) for all charts and visualizations
 
 Data Access:
-- spark.table() for all reads
-- Unity Catalog three-part table names: catalog.schema.table
+- Notebooks and DLT: spark.table() for all reads
+- Databricks Apps: databricks-sdk WorkspaceClient + Statement Execution API (no Spark session in Apps runtime)
+- Unity Catalog three-part table names: catalog.schema.table in both runtimes
 - Gold layer tables only in UI-facing apps
 - Delta Lake as the table format
 
@@ -78,7 +79,7 @@ Libraries:
 All applications must handle errors at layer boundaries and surface them clearly.
 
 Rules:
-- Wrap all spark.table() calls in try/except in the data layer
+- Wrap all data access calls in try/except in the data layer (spark.table() in Notebooks; WorkspaceClient in Apps)
 - Wrap all aggregation logic in try/except in the logic layer
 - Never let raw tracebacks reach the UI — display user-friendly messages
 - Always catch Exception as e — never use bare except:
@@ -92,10 +93,29 @@ class DataAccessError(Exception):
 class LogicError(Exception):
     pass
 
-Data layer pattern:
+Data layer pattern (Notebooks — spark.table()):
 try:
     df = spark.table("catalog.schema.table")
     logger.info(f"Loaded table: catalog.schema.table ({df.count()} rows)")
+except Exception as e:
+    logger.error(f"Failed to load catalog.schema.table: {e}")
+    raise DataAccessError(f"Table unavailable: catalog.schema.table") from e
+
+Data layer pattern (Databricks Apps — WorkspaceClient, NO spark):
+try:
+    w = WorkspaceClient()  # auto-configures from App runtime environment
+    result = w.statement_execution.execute_statement(
+        warehouse_id=warehouse_id,
+        statement="SELECT * FROM catalog.schema.table",
+        wait_timeout="30s",
+    )
+    if result.status.state.value != "SUCCEEDED":
+        raise DataAccessError(f"Query failed: {result.status.error.message}")
+    cols = [c.name for c in result.manifest.schema.columns]
+    df = pd.DataFrame(result.result.data_array or [], columns=cols)
+    logger.info(f"Loaded {len(df)} rows from catalog.schema.table")
+except DataAccessError:
+    raise
 except Exception as e:
     logger.error(f"Failed to load catalog.schema.table: {e}")
     raise DataAccessError(f"Table unavailable: catalog.schema.table") from e
@@ -152,9 +172,9 @@ from _logger import get_logger
 logger = get_logger(__name__)
 
 Log these events in data.py:
-- Before spark.table(): logger.info(f"Loading: catalog.schema.table")
-- After spark.table(): logger.info(f"Loaded {df.count()} rows from catalog.schema.table")
-- On filter applied: logger.debug(f"Filter applied — {filtered_df.count()} rows remaining")
+- Before data load: logger.info(f"Loading: catalog.schema.table")
+- After data load: logger.info(f"Loaded {len(df)} rows from catalog.schema.table")  # use len(df) in Apps (pandas); df.count() in Notebooks (Spark)
+- On filter applied: logger.debug(f"Filter applied — {len(filtered_df)} rows remaining")
 - On error: logger.error(f"Data access failed: {e}")
 
 Log these events in logic.py:
