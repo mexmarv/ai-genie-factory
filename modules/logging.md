@@ -25,9 +25,9 @@ from _logger import get_logger
 logger = get_logger(__name__)
 
 Log these events in data.py:
-- Before spark.table(): logger.info(f"Loading: catalog.schema.table")
-- After spark.table(): logger.info(f"Loaded {df.count()} rows from catalog.schema.table")
-- On filter applied: logger.debug(f"Filter applied — {filtered_df.count()} rows remaining")
+- Before data load: logger.info(f"Loading: catalog.schema.table")
+- After data load: logger.info(f"Loaded {len(df)} rows from catalog.schema.table")  # use len(df) in Apps (pandas); df.count() in Notebooks (Spark)
+- On filter applied: logger.debug(f"Filter applied — {len(filtered_df)} rows remaining")
 - On error: logger.error(f"Data access failed: {e}")
 
 Log these events in logic.py:
