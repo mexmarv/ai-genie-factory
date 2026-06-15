@@ -249,16 +249,37 @@ w = WorkspaceClient()  # module-level: SDK hangs resolving auth metadata
 WorkspaceClient(host=os.environ["DATABRICKS_HOST"], token=os.environ.get("DATABRICKS_TOKEN"))
 ```
 
-**Startup data loading:** Always load from CSV (or a lightweight source) at module startup. Query UC tables in callbacks only — never in module-level code.
+**Startup data loading:** Initialize globals as empty DataFrames at module level. Use `dcc.Interval(max_intervals=1)` to trigger a UC load 3 seconds after first page load (after the health check has already passed). Show a loading banner while data is pending; update it to a success/error state in the callback.
 
 ```python
 # app.py — correct startup pattern
-try:
-    stores_df = pd.read_csv('stores.csv')   # fast, no network
-    logger.info(f"Loaded {len(stores_df)} stores from CSV")
-except Exception as e:
-    logger.error(f"CSV load failed: {e}")
-    stores_df = pd.DataFrame()
+# Empty at startup — UC data loads via callback after health check passes.
+stores_df = pd.DataFrame()
+items_df = pd.DataFrame()
+store_options = []
+
+# In layout:
+dcc.Interval(id='uc-reload-interval', interval=3000, max_intervals=1, n_intervals=0),
+html.Div(id='data-loading-banner', children=[html.Span("Cargando desde Databricks…")])
+dcc.Dropdown(id='store-dropdown', options=[], placeholder="Esperando datos...", disabled=True)
+
+# Callback that fires once, loads from UC, updates globals + dropdown + banner:
+@app.callback(
+    [Output('store-dropdown', 'options'),
+     Output('store-dropdown', 'disabled'),
+     Output('data-loading-banner', 'children')],
+    [Input('uc-reload-interval', 'n_intervals')],
+    prevent_initial_call=True
+)
+def reload_from_uc(n_intervals):
+    global stores_df, items_df, store_options
+    try:
+        stores_df = _execute_sql(f"SELECT ... FROM {TABLE_STORES}", warehouse_id)
+        items_df  = _execute_sql(f"SELECT ... FROM {TABLE_ITEMS}", warehouse_id)
+        store_options = [{'label': ..., 'value': ...} for _, row in stores_df.iterrows()]
+        return store_options, False, html.Span(f"✓ {len(stores_df)} tiendas — datos en vivo")
+    except Exception as e:
+        return [], True, html.Span(f"✗ Error: {e}")
 ```
 
 ---
