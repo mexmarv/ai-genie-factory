@@ -61,8 +61,8 @@ ai-genie-factory/
 │   ├── databricks-app.md              ← @databricks-app — full app architecture, file layers, app.yaml, OAuth, deployment, debug
 │   ├── databricks-dashboard.md        ← @databricks-dashboard — AI/BI Lakeview dashboards, dataset SQL, widget config, filters, scheduling
 │   ├── dlt-pipeline.md                ← @dlt-pipeline — Bronze/Silver/Gold, Auto Loader, CDC, SCD2, schema evolution, streaming
-│   ├── data-access.md                 ← @data-access — spark.table(), Unity Catalog, DataAccessError
-│   └── testing-scaffold.md            ← @testing-scaffold — pytest, mocked Spark, pandas logic tests
+│   ├── data-access.md                 ← @data-access — sql-connector + Config(), Unity Catalog, batching, DataAccessError
+│   └── testing-scaffold.md            ← @testing-scaffold — pytest, mocked dbsql.connect(), pandas logic tests
 │
 ├── templates/
 │   ├── PROMPT_TEMPLATE.md             ← Exact prompt for every Genie Code session
@@ -102,12 +102,12 @@ ai-genie-factory/
 | 2 | `STACK.md` | Technology choices — never redefined per app |
 | 3 | `modules/error_handling.md` | Error contracts — never overridden |
 | 4 | `modules/logging.md` | Logging standard — never overridden |
-| 5 | `@data-access` skill | spark.table(), Unity Catalog, DataAccessError |
+| 5 | `@data-access` skill | sql-connector + Config(), Unity Catalog, batching, DataAccessError |
 | 6 | `@ui-ux-patterns` skill | Design tokens, shadows, typography, charts, KPI cards |
-| 7 | `@databricks-app` skill | App file layers, app.yaml, OAuth, deployment |
-| 8 | `@databricks-dashboard` skill | AI/BI dashboard SQL, widgets, filters, scheduling |
-| 9 | `@dlt-pipeline` skill | Bronze/Silver/Gold, CDC, SCD2, streaming |
-| 10 | `@testing-scaffold` skill | pytest, mocked Spark, pandas logic tests |
+| 7 | `@databricks-app` skill | App file layers, app.yaml, OAuth M2M, deployment, debug checklist |
+| 8 | `@databricks-dashboard` skill | AI/BI Lakeview dashboard SQL, widgets, filters, scheduling |
+| 9 | `@dlt-pipeline` skill | Bronze/Silver/Gold, serverless DLT, CDC, SCD2, streaming |
+| 10 | `@testing-scaffold` skill | pytest, mocked dbsql.connect(), pandas logic tests |
 | 11 | `APP.md` | App-specific spec — only what's unique to this app |
 
 ---
@@ -215,31 +215,38 @@ Output:
    □ If no → re-prompt with PROMPT_TEMPLATE.md, @mention missing skill
 
 2. LAYER VIOLATIONS
-   □ spark.table() outside data.py?   → @data-access, move to data.py
-   □ Business logic in ui.py?         → move to logic.py
-   □ toPandas() outside ui.py?        → @ui-ux-patterns, move to ui.py
+   □ dbsql.connect() outside data.py?  → @data-access, move inside a function
+   □ Config() called at module level?  → @databricks-app — moves inside callback
+   □ Business logic in ui.py?          → move to logic.py
+   □ toPandas() called anywhere?       → Apps use pandas; data.py returns pd.DataFrame
 
-3. TABLE NAMES
+3. DATA ACCESS
+   □ Using sql-connector + Config() not WorkspaceClient().statement_execution?
+   □ Batching both queries in one dbsql.connect() call (not two separate connections)?
+   □ lat/lon/decimal columns CAST AS DOUBLE in SQL or pd.to_numeric() after load?
+
+4. TABLE NAMES
    □ All refs three-part (catalog.schema.table)?
    □ Hardcoded strings outside app.py config dict?
 
-4. LOGGING
+5. LOGGING
    □ Each file imports from _logger?
    □ Check Databricks Apps logs for ERROR lines first
 
-5. ERROR HANDLING
+6. ERROR HANDLING
    □ data.py raises DataAccessError on failure?
    □ ui.py catches exceptions and shows _error_figure()?
 
-6. DESIGN SYSTEM
+7. DESIGN SYSTEM
    □ Background #0d1117, cards #161b22?  → @ui-ux-patterns
    □ All charts use plotly_dark template?
    □ No px.pie (use px.treemap), no #636efa (use #00bcd4)?
 
-7. PIPELINE
+8. PIPELINE
    □ DLT tables named bronze_/silver_/gold_?  → @dlt-pipeline
    □ No spark.read() inside DLT notebooks?
    □ File paths use /Volumes/ not dbfs:/?
+   □ New pipelines use serverless DLT?
 ```
 
 ---
@@ -255,9 +262,23 @@ Output:
 
 ---
 
+## Skill Reference
+
+All skills are aligned with Databricks' official AI Dev Kit:
+[github.com/databricks-solutions/ai-dev-kit](https://github.com/databricks-solutions/ai-dev-kit/tree/main/databricks-skills)
+
+Key patterns enforced from ai-dev-kit:
+- **Apps auth:** `databricks-sql-connector` + `Config()` credentials provider — never `WorkspaceClient().statement_execution`
+- **App startup:** empty globals + `dcc.Interval(max_intervals=1)` — `Config()` never at module level
+- **app.yaml resources:** `valueFrom: sql-warehouse` — never hardcode IDs
+- **DLT:** serverless by default, `dlt.read()` not `spark.read()`
+- **Grants:** SP `applicationId` UUID — never display name
+
+---
+
 ## Contributing
 
-1. Edit `GLOBAL_RULES.md`, `STACK.md`, or `modules/*.md` → run `python build_agents.py`
+1. Edit `GLOBAL_RULES.md`, `STACK.md`, or `modules/*.md` → run `python3 build_agents.py`
 2. Edit skills in `skills/<name>.md` → run `./deploy.sh` to push changes
 3. Never edit `AGENTS.md` directly — it's generated
 4. Add new apps under `apps/<app-name>/APP.md`
