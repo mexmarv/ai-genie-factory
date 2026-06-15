@@ -226,22 +226,40 @@ Pin major versions. Never use `>=` for `dash` or `streamlit` — breaking change
 
 ## Auth in Databricks Apps
 
-Databricks Apps injects the runtime environment automatically. `WorkspaceClient()` with **no arguments** is the correct pattern — it reads `DATABRICKS_HOST` and authenticates via the App's service principal automatically.
+`WorkspaceClient()` with **no arguments** is the correct pattern. It reads `DATABRICKS_HOST` from the injected environment and authenticates via the App's service principal.
+
+**CRITICAL: Never call `WorkspaceClient()` at module level.** The SDK performs auth/metadata resolution on first use which can block the App's health check and crash the app. Always call it inside a function or callback.
 
 ```python
-# data.py — WorkspaceClient() with no args; never pass token or host manually
+# data.py — correct: WorkspaceClient() inside a function, never at module level
 from databricks.sdk import WorkspaceClient
 
-w = WorkspaceClient()  # correct — auto-configures from App runtime
+def _execute_sql(sql: str, warehouse_id: str) -> pd.DataFrame:
+    w = WorkspaceClient()  # called inside function — safe
+    result = w.statement_execution.execute_statement(...)
+    ...
 ```
 
 **Do NOT do:**
 ```python
+# Wrong — blocks health check, crashes app
+w = WorkspaceClient()  # module-level: SDK hangs resolving auth metadata
+
 # Wrong — DATABRICKS_TOKEN may not be set in App runtime
 WorkspaceClient(host=os.environ["DATABRICKS_HOST"], token=os.environ.get("DATABRICKS_TOKEN"))
 ```
 
-`DATABRICKS_TOKEN` is **not guaranteed** to be injected. The SDK's zero-argument `WorkspaceClient()` is the only reliable auth pattern in Apps runtime.
+**Startup data loading:** Always load from CSV (or a lightweight source) at module startup. Query UC tables in callbacks only — never in module-level code.
+
+```python
+# app.py — correct startup pattern
+try:
+    stores_df = pd.read_csv('stores.csv')   # fast, no network
+    logger.info(f"Loaded {len(stores_df)} stores from CSV")
+except Exception as e:
+    logger.error(f"CSV load failed: {e}")
+    stores_df = pd.DataFrame()
+```
 
 ---
 
@@ -395,6 +413,8 @@ GRANT SELECT ON SCHEMA prod.gold TO `group:alpura-app-readers`;
 - `spark.table()` or `spark.sql()` in Databricks Apps — there is **no Spark session**; use `WorkspaceClient`
 - `pyspark` or `databricks-connect` in `requirements.txt` for Apps
 - `WorkspaceClient(token=...)` — do not pass a token; use `WorkspaceClient()` with no args
+- `WorkspaceClient()` at module level — always inside a function or callback; module-level blocks the health check
+- `geopandas`, `shapely`, or any package requiring native C libs (GDAL, etc.) — not available in Apps runtime
 - Hardcoded catalog/schema/table strings or `warehouse_id` outside `CONFIG`
 - `pd.read_csv()`, JDBC, or raw REST calls in `data.py`
 - Business logic in `ui.py` — aggregations go in `logic.py`
