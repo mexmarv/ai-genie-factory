@@ -42,7 +42,9 @@ from _logger import get_logger
 
 logger = get_logger(__name__)
 
-WAREHOUSE_ID = os.environ.get("DATABRICKS_WAREHOUSE_ID", "")
+# Full HTTP path injected by app.yaml: value: /sql/1.0/warehouses/your-id
+# Do NOT use DATABRICKS_WAREHOUSE_ID — that env var is never set by the App runtime.
+HTTP_PATH = os.environ.get("DATABRICKS_HTTP_PATH", "")
 
 
 class DataAccessError(Exception):
@@ -55,7 +57,7 @@ def _execute_sql(query: str) -> pd.DataFrame:
     cfg = Config()  # auto-detects DATABRICKS_CLIENT_ID / SECRET injected by App runtime
     with dbsql.connect(
         server_hostname=cfg.host,
-        http_path=f"/sql/1.0/warehouses/{WAREHOUSE_ID}",
+        http_path=HTTP_PATH,          # full path from env — NOT f"/sql/1.0/warehouses/{id}"
         credentials_provider=lambda: cfg.authenticate,
     ) as conn:
         with conn.cursor() as cursor:
@@ -104,7 +106,7 @@ def _batch_queries(queries: dict) -> dict:
     results = {}
     with dbsql.connect(
         server_hostname=cfg.host,
-        http_path=f"/sql/1.0/warehouses/{WAREHOUSE_ID}",
+        http_path=HTTP_PATH,
         credentials_provider=lambda: cfg.authenticate,
     ) as conn:
         for key, query in queries.items():
@@ -145,12 +147,12 @@ df['lat_dgr'] = pd.to_numeric(df['lat_dgr'], errors='coerce')
 
 ## Config Pattern
 
-Table names and warehouse ID live in `app.py` — never hardcoded in `data.py`:
+Table names and HTTP path live in `app.py` — never hardcoded in `data.py`:
 
 ```python
 # app.py
 import os
-WAREHOUSE_ID = os.environ.get("DATABRICKS_WAREHOUSE_ID", "")
+HTTP_PATH = os.environ.get("DATABRICKS_HTTP_PATH", "")  # full path from app.yaml
 CATALOG  = "prod"
 SCHEMA   = "gold"
 TABLES = {
@@ -171,8 +173,8 @@ def load_sales(catalog: str, schema: str, table: str) -> pd.DataFrame:
 # Active stores — both financial and operational close dates must be NULL
 WHERE fin_close_dt IS NULL AND op_close_dt IS NULL
 
-# Active items
-WHERE UPPER(item_status_cd) = 'A'
+# Active items — use exact case 'A' (confirmed in Scintilla silver tables)
+WHERE item_status_cd = 'A'
 
 # Active with geo coordinates (for maps)
 WHERE lat_dgr IS NOT NULL AND long_dgr IS NOT NULL

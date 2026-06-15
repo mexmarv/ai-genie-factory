@@ -111,79 +111,98 @@ def filter_by_values(df: pd.DataFrame, col: str, values: list) -> pd.DataFrame:
 
 ---
 
-## Startup Pattern — Empty Globals + dcc.Interval UC Load
+## Startup Pattern — CSV Fallback + dcc.Interval UC Retry
 
-**Never call `Config()` or `dbsql.connect()` at module level.** It blocks the health check.
-Start with empty DataFrames. Use `dcc.Interval(max_intervals=1)` to load from UC 3 seconds
-after page load (after the health check has passed). Show a loading banner.
+**Never call `Config()` or `dbsql.connect()` at module level** — it blocks the health check
+and causes a 502. Two-phase pattern: load from CSV instantly (health check passes, UI is
+interactive), then retry UC in the background interval until the warehouse responds.
+
+**Why retry, not single-shot:** `max_intervals=1` silently fails if the warehouse is cold
+at the moment the interval fires. Use `max_intervals=12, interval=10000` (retries every 10 s
+for up to 2 minutes) with a `_uc_loaded` flag to stop once data is live.
 
 ```python
-# app.py — correct startup
-stores_df = pd.DataFrame()   # empty at startup
-items_df  = pd.DataFrame()
-store_options = []
+# app.py — correct two-phase startup
 
-# In layout — disabled dropdown + loading banner + one-shot interval:
-dcc.Interval(id='uc-reload-interval', interval=3000, max_intervals=1, n_intervals=0),
-html.Div(id='data-loading-banner', children=[html.Span("Cargando desde Databricks…")]),
-dcc.Dropdown(id='store-dropdown', options=[], placeholder="Esperando datos...", disabled=True),
-html.Div(id='uc-data-status', style={'display': 'none'}),
+# Phase 1: CSV — instant, health check passes, UI is interactive immediately
+try:
+    stores_df, items_df = load_catalog_csv("stores.csv", "items.csv")
+    store_options = [{'label': r['name'], 'value': r['id']}
+                     for _, r in stores_df.iterrows()]
+except Exception as e:
+    logger.error(f"CSV startup failed: {e}")
+    stores_df, items_df, store_options = pd.DataFrame(), pd.DataFrame(), []
 
-# UC reload callback — fires once, loads live data, enables dropdown:
+_uc_loaded = False  # module-level flag — prevents redundant retries after success
+
+# In layout:
+dcc.Interval(id='uc-reload-interval', interval=10000, max_intervals=12, n_intervals=0),
+html.Div(id='data-loading-banner', children=[
+    html.Span("⏳ Conectando a Databricks…", style={"color": TEXT_SECONDARY})
+]),
+dcc.Dropdown(id='store-dropdown', options=store_options,
+             placeholder="Buscar…", disabled=False),  # enabled — CSV data ready
+
+# Phase 2: UC reload callback — retries every 10 s, stops on success
 @app.callback(
     [Output('store-dropdown', 'options'),
      Output('store-dropdown', 'placeholder'),
      Output('store-dropdown', 'disabled'),
      Output('data-loading-banner', 'children'),
-     Output('uc-data-status', 'children')],
+     Output('uc-reload-interval', 'max_intervals')],
     [Input('uc-reload-interval', 'n_intervals')],
     prevent_initial_call=True
 )
 def reload_from_uc(n_intervals):
-    global stores_df, items_df, store_options
+    global stores_df, items_df, store_options, _uc_loaded
+    if _uc_loaded:
+        return [dash.no_update] * 5  # already live — skip
     try:
-        stores_df = load_table(CATALOG, SCHEMA, "stores", WAREHOUSE_ID, where="fin_close_dt IS NULL")
-        items_df  = load_table(CATALOG, SCHEMA, "items",  WAREHOUSE_ID, where="UPPER(status_cd) = 'A'")
-        store_options = [{'label': row['name'], 'value': row['id']} for _, row in stores_df.iterrows()]
-        banner = html.Span(f"✓ {len(stores_df)} registros — datos en vivo", style={'color': COLOR_SUCCESS})
-        return store_options, "Buscar...", False, banner, "uc"
+        stores_df, items_df = load_catalog(TABLE_STORES, TABLE_ITEMS)
+        store_options = [{'label': r['name'], 'value': r['id']}
+                         for _, r in stores_df.iterrows()]
+        _uc_loaded = True
+        banner = html.Span(
+            f"✓ {len(stores_df)} tiendas · {len(items_df)} artículos — Databricks",
+            style={"color": POSITIVE, "fontWeight": "500"}
+        )
+        return store_options, "Buscar…", False, banner, n_intervals  # stop interval
     except Exception as e:
-        logger.error(f"UC reload failed: {e}")
-        banner = html.Div([
-            html.Span("✗ Error cargando datos:", style={'color': COLOR_ERROR, 'fontWeight': '600'}),
-            html.Span(str(e), style={'fontSize': '10px', 'display': 'block'})
-        ])
-        return [], "Error al cargar datos", True, banner, "error"
+        logger.error(f"UC attempt {n_intervals} failed: {e}")
+    banner = html.Span(f"⏳ Conectando… (intento {n_intervals}/12)",
+                       style={"color": TEXT_SECONDARY})
+    return store_options, "Buscar…", False, banner, dash.no_update
 ```
 
-Any callback that renders data (map, chart) must also take `Input('uc-data-status', 'children')`
-so it re-renders once UC data arrives.
+Callbacks that render data (map, chart) should NOT take `uc-data-status` as an Input —
+it causes unwanted re-renders that can wipe user state (e.g. DENUE overlays). Instead,
+they read from the global DataFrames which are already updated when the user next interacts.
 
 ---
 
 ## app.yaml — Deployment Manifest
 
-Use `valueFrom` for resource references — never hardcode IDs:
+Set `DATABRICKS_HTTP_PATH` as a plain `value` — the full warehouse HTTP path.
+**Do NOT use `valueFrom` + `resources:`** — this pattern throws
+"error resolving resource: resource not found" unless the workspace admin has pre-configured
+the resource grant, which is rarely done. Every working Alpura app uses plain `value:`.
 
 ```yaml
 command: ["python", "app.py"]       # Dash
 # command: ["streamlit", "run", "app.py", "--server.port=8050"]  # Streamlit
 
 env:
-  - name: DATABRICKS_WAREHOUSE_ID
-    valueFrom: sql-warehouse          # references the resource name below
+  - name: DATABRICKS_HTTP_PATH
+    value: /sql/1.0/warehouses/your-warehouse-id   # full HTTP path, not just the ID
   - name: APP_ENV
     value: "production"
-
-resources:
-  - name: sql-warehouse
-    sql_warehouse:
-      id: "your-warehouse-id"         # warehouse ID from Databricks UI
-      permission: CAN_USE
 ```
 
 `DATABRICKS_HOST`, `DATABRICKS_CLIENT_ID`, and `DATABRICKS_CLIENT_SECRET` are injected
 automatically by the App runtime — do NOT declare them in app.yaml.
+
+> To find the warehouse HTTP path: Databricks UI → SQL Warehouses → your warehouse →
+> Connection Details → HTTP Path (looks like `/sql/1.0/warehouses/5e20f044ce39cd0b`).
 
 ---
 
@@ -226,7 +245,8 @@ Use the UUID (e.g. `14b79bb6-7339-476f-b217-79b270d51906`), NOT the display name
 ```python
 import os
 
-WAREHOUSE_ID = os.environ.get("DATABRICKS_WAREHOUSE_ID", "")
+# Read the full HTTP path injected by app.yaml — NOT the warehouse ID alone
+HTTP_PATH = os.environ.get("DATABRICKS_HTTP_PATH", "")
 CATALOG  = "prod"
 SCHEMA   = "gold"
 TABLES = {
@@ -293,7 +313,11 @@ databricks apps list
 2. NO DATA LOADS / QUERY FAILS
    □ SP has USE CATALOG, USE SCHEMA, SELECT? Run GRANT in a notebook
    □ GRANT uses applicationId UUID (from databricks apps get), NOT display name
-   □ DATABRICKS_WAREHOUSE_ID injected? Check via valueFrom: sql-warehouse in app.yaml
+   □ DATABRICKS_HTTP_PATH set in app.yaml as plain value:? Check logs for warehouse=''
+   □ Do NOT use valueFrom: + resources: — throws "resource not found" unless workspace admin
+     pre-configures it. Use value: /sql/1.0/warehouses/your-id instead
+   □ Interval fires but query still fails? Warehouse may be cold — use max_intervals=12
+     with interval=10000 to retry up to 2 minutes
    □ Error banner shows specific message? That's the real error — fix it
 
 3. MAP / CHART DOESN'T UPDATE AFTER DATA LOADS
