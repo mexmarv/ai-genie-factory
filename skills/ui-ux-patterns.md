@@ -422,14 +422,18 @@ def _error_figure(message: str) -> go.Figure:
 
 ---
 
-## Pandas Conversion Rule
+## Pandas Rule
+
+Databricks Apps have no Spark session — `data.py` returns `pandas.DataFrame` directly.
+All chart functions accept `pd.DataFrame`. No `.toPandas()` conversion needed or allowed.
 
 ```python
-# ui.py — CORRECT: toPandas() here, pass pandas DataFrame to chart functions
-fig = build_trend_chart(spark_df.toPandas(), x="date", y="amount", title="Trend")
+# CORRECT: data.py already returns pandas
+df = load_table(catalog, schema, table)          # returns pd.DataFrame
+fig = build_trend_chart(df, x="date", y="amount", title="Trend")
 
-# logic.py — WRONG: never convert in the logic layer
-return df.groupBy(...).agg(...).toPandas()
+# WRONG: no Spark in Apps
+return df.groupBy(...).agg(...).toPandas()       # AttributeError — no Spark
 ```
 
 ---
@@ -466,7 +470,7 @@ Always `<extra></extra>` to suppress trace name box. Always `<b>` the value.
 - Default Plotly blue `#636efa` — always `#00bcd4`
 - Flat unshadowed cards — every surface must have `boxShadow`
 - Per-app invented colors outside the token set
-- `toPandas()` outside the UI layer
+- `.toPandas()` — Apps use pandas throughout; `data.py` returns pandas already
 - `font-family` other than Inter or the mono fallback
 - Vertical bar charts for category labels > 8 characters
 - Hovertemplates left as Plotly default — always set explicitly
@@ -590,9 +594,9 @@ def update_dashboard(start_date, end_date):
             kpi_card("Orders",        fmt_number(df_kpis["orders"]),    "▲ 3.2% vs prior", True),
         ]
         return (kpis,
-                build_trend_chart(df_trend.toPandas(),    "date",     "amount",   "Revenue Trend"),
-                build_category_chart(df_by_cat.toPandas(),"amount",   "category", "By Category"),
-                data_table(df_by_cat.toPandas(), "main-table"))
+                build_trend_chart(df_trend,    "date",     "amount",   "Revenue Trend"),
+                build_category_chart(df_by_cat, "amount",   "category", "By Category"),
+                data_table(df_by_cat, "main-table"))
     except Exception as e:
         logger.error(f"Dashboard update failed: {e}")
         err = _error_figure(str(e))
@@ -671,8 +675,8 @@ with st.sidebar:
 try:
     df_raw    = load_entity()
     df_kpis   = compute_kpis(df_raw, *date_range)
-    df_trend  = compute_trend(df_raw, *date_range).toPandas()
-    df_by_cat = compute_by_category(df_raw, *date_range).toPandas()
+    df_trend  = compute_trend(df_raw, *date_range)
+    df_by_cat = compute_by_category(df_raw, *date_range)
 except Exception as e:
     logger.error(f"Load failed: {e}")
     st.error(f"Data unavailable: {e}")

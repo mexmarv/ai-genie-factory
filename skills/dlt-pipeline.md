@@ -347,7 +347,8 @@ Recommended cluster config:
 }
 ```
 
-For serverless DLT (recommended for new pipelines):
+**Serverless DLT is the default for all new pipelines** (faster startup, no cluster config,
+auto-scales, Photon enabled by default):
 
 ```json
 {
@@ -355,6 +356,8 @@ For serverless DLT (recommended for new pipelines):
   "channel": "CURRENT"
 }
 ```
+
+Classic compute only when serverless is unavailable in the region or cost constraints apply.
 
 ---
 
