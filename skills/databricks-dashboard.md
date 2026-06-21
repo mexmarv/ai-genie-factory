@@ -14,7 +14,7 @@ description: >
 Apply to every native Databricks Lakeview Dashboard. These run directly in the Databricks
 workspace — no Python app needed. Always read from Gold layer tables only.
 
-> Always load **@ui-ux-patterns** alongside this skill for color tokens and chart type rules.
+> Always load **@ui-ux-patterns** alongside this skill for color tokens and chart type rules. Follow the **60-30-10 rule** for colors and use **DM Sans** for your title fonts.
 >
 > For **conversational / natural language** interfaces on top of Gold tables, use Genie Spaces
 > (managed via `manage_genie` MCP tool) instead of, or alongside, Lakeview Dashboards.
@@ -233,6 +233,8 @@ Max selections: 10
 ---
 
 ## Dashboard Layout Template
+
+Always use the **Z-pattern** or **F-pattern** for creating hierarchy. Place the most important titles and filters top-left, and more detailed charts/tables bottom-right.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
