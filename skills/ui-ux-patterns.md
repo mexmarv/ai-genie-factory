@@ -19,7 +19,10 @@ Apply to every `ui.py` and `app.py` file generated or reviewed.
 
 ## Design Tokens
 
-Use these exact hex values. Never invent colors per app.
+Use these exact hex values. Never invent colors per app. These adhere to the **60-30-10 rule**:
+- **60% Dominant (Neutral Backgrounds)**: `Background`, `Surface`, `Card`. Keeping borders matching widget backgrounds reduces visual clutter.
+- **30% Secondary**: `Text primary`, `Text secondary`, and Chart Color Sequences.
+- **10% Accent**: `Accent cyan` for interactive elements like filters, tabs, and buttons.
 
 | Token | Hex | Use |
 |---|---|---|
@@ -65,15 +68,15 @@ SHADOW = {
 
 ## Typography Scale
 
-Inter is mandatory. Always load via Google Fonts or system fallback.
+Inter is for body text, and DM Sans for titles. Always load via Google Fonts or system fallback.
 
 ```python
 TYPE = {
     "font":      "Inter, -apple-system, BlinkMacSystemFont, system-ui, sans-serif",
     "mono":      "'JetBrains Mono', 'Fira Code', monospace",
     # Sizes with weight + spacing
-    "display":   {"fontSize": "22px", "fontWeight": "700", "letterSpacing": "-0.3px",  "lineHeight": "1.2"},
-    "heading":   {"fontSize": "14px", "fontWeight": "600", "letterSpacing": "0.02em"},
+    "display":   {"fontFamily": "DM Sans, sans-serif", "fontSize": "22px", "fontWeight": "700", "letterSpacing": "-0.3px",  "lineHeight": "1.2"},
+    "heading":   {"fontFamily": "DM Sans, sans-serif", "fontSize": "14px", "fontWeight": "600", "letterSpacing": "0.02em"},
     "kpi_value": {"fontSize": "36px", "fontWeight": "700", "letterSpacing": "-0.5px",  "lineHeight": "1"},
     "kpi_label": {"fontSize": "11px", "fontWeight": "500", "letterSpacing": "0.08em",  "textTransform": "uppercase"},
     "body":      {"fontSize": "13px", "fontWeight": "400", "lineHeight": "1.5"},
@@ -96,7 +99,7 @@ BASE_LAYOUT = dict(
     paper_bgcolor="#111820",
     plot_bgcolor="#111820",
     font=dict(family="Inter, -apple-system, system-ui, sans-serif", color="#8b96a8", size=11),
-    title_font=dict(family="Inter, system-ui, sans-serif", size=13, color="#e8edf4"),
+    title_font=dict(family="DM Sans, system-ui, sans-serif", size=13, color="#e8edf4"),
     margin=dict(l=48, r=24, t=44, b=44),
     xaxis=dict(gridcolor="rgba(37,48,64,0.8)", linecolor="rgba(37,48,64,0.6)",
                tickfont=dict(size=10, color="#4a5568"), zeroline=False),
@@ -149,7 +152,7 @@ Never `px.pie`. Never 3D. Never vertical bars for labels > 8 chars.
 
 ## App Layout Order
 
-Always this sequence — never reorder:
+Always this sequence — never reorder. Follow the **Z-pattern** layout logic, starting top-left with titles and filters, cutting diagonally down, and landing bottom-right on detailed visualizations and tables:
 
 ```
 1. App header     — branded bar: Alpura navy bg, title, data source caption
