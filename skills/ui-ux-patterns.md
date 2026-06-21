@@ -126,6 +126,10 @@ SEQ        = ["#00bcd4","#00a8c0","#0094a8","#008090","#006c78"]  # single metri
 CATEGORICAL = ["#00bcd4","#7c4dff","#22c55e","#f59e0b","#f43f5e"] # multi-series
 DIVERGING   = ["#f43f5e","#f59e0b","#22c55e"]                      # neg → neutral → pos
 BLUES       = ["#003087","#004db3","#0070e0","#00a8c0","#00bcd4"]  # Alpura brand ramp
+EXTENDED_PALETTE = [
+    "#00bcd4", "#00a8c0", "#0070e0", "#004db3", "#003087",         # Cyan to Navy
+    "#4a148c", "#651fff", "#7c4dff", "#b388ff", "#e040fb"          # Deep purples to bright purples
+] # Use for bar/line charts with many sections
 FILL_CYAN   = "rgba(0,188,212,0.08)"   # area fill under line charts
 FILL_PURPLE = "rgba(124,77,255,0.08)"
 ```
