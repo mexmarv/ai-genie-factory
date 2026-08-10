@@ -46,15 +46,17 @@ Platform (Lakehouse)
 ```
 ai-genie-factory/
 │
-├── AGENTS.md                          ← Lean always-on constraints (~6,000 chars)
+├── AGENTS.md                          ← Lean always-on constraints (~8,300 chars)
 ├── GLOBAL_RULES.md                    ← Platform law (never override)
 ├── STACK.md                           ← Technology choices (never override)
+├── LICENSE                            ← MIT
 ├── build_agents.py                    ← Assembles AGENTS.md from core modules only
 ├── deploy.sh                          ← Deploys instructions + skills via Databricks CLI
 │
 ├── modules/                           ← Source files compiled into AGENTS.md
 │   ├── error_handling.md              ← try/except contracts, custom exceptions
-│   └── logging.md                     ← Structured logging standard (_logger.py)
+│   ├── logging.md                     ← Structured logging standard (_logger.py)
+│   └── skill_index.md                 ← Always-loaded routing table — which skill covers what
 │
 ├── skills/                            ← Agent Skills standard: one folder per skill
 │   ├── ui-ux-patterns/SKILL.md          ← @ui-ux-patterns — dark/light tokens, typography, KPI cards, charts (Apps)
@@ -88,10 +90,20 @@ ai-genie-factory/
 | **When loaded** | Every Genie Code session | Only when relevant to the request |
 | **Purpose** | Non-negotiable platform guardrails | Domain knowledge, patterns, design systems |
 | **Size target** | < 6,000 chars | As large as needed |
-| **Contents** | Global rules, stack, error handling, logging | Charts, pipelines, testing, UX/UI design |
+| **Contents** | Global rules, stack, error handling, logging, skill index | Charts, pipelines, testing, UX/UI design |
 | **How to invoke** | Automatic | Automatic (Agent mode) or `@skill-name` |
 
 **Rule of thumb:** if it applies to every single generation, it goes in AGENTS.md. If it applies to a specific type of work, it's a skill.
+
+**Do I need to `@mention` a skill?** No, not normally. Genie Code Agent mode reads each
+skill's `description` frontmatter and loads it automatically when your prompt matches —
+"build me a dashboard" alone is enough to pull in `@databricks-dashboard` and
+`@databricks-dashboard-colors`. There is no third "always force this skill" setting for
+skills — the only thing that is truly loaded on every single request, with zero matching
+required, is `AGENTS.md`/the workspace instructions file. That's why `modules/skill_index.md`
+exists: a short, always-loaded table naming every skill and when it should fire, so routing
+stays reliable even when a prompt is worded ambiguously. `@mention` is still there for when
+you want to force a specific skill regardless of wording.
 
 ---
 
@@ -206,7 +218,7 @@ python build_agents.py
 
 Output:
 ```
-✅  LEAN  AGENTS.md — 7,294 / 20,000 chars (36.5%)
+✅  LEAN  AGENTS.md — 8,344 / 20,000 chars (41.7%)
    Target: keep under 12,000 chars (60%) — domain knowledge belongs in skills/
 
   Skills to deploy separately (copy to /Workspace/.assistant/skills/):
@@ -301,7 +313,7 @@ Key patterns enforced by this factory:
 
 ## License
 
-MIT — use freely, adapt to your stack.
+[MIT](LICENSE) — use freely, adapt to your stack.
 
 ---
 

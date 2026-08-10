@@ -6,7 +6,7 @@ Skills (data-access, ui-ux-patterns, databricks-app, databricks-dashboard,
 databricks-dashboard-colors, dlt-pipeline, testing-scaffold) live in skills/ and are
 loaded by Genie Code Agent mode on demand — NOT compiled here.
 
-Run after editing GLOBAL_RULES.md, STACK.md, or modules/error_handling.md / logging.md:
+Run after editing GLOBAL_RULES.md, STACK.md, or any modules/*.md file:
     python build_agents.py
 
 Workspace deployment:
@@ -32,6 +32,7 @@ SOURCES = [
     ("STACK",          ROOT / "STACK.md"),
     ("ERROR HANDLING", ROOT / "modules" / "error_handling.md"),
     ("LOGGING",        ROOT / "modules" / "logging.md"),
+    ("SKILL INDEX",    ROOT / "modules" / "skill_index.md"),
 ]
 
 HEADER = """\
