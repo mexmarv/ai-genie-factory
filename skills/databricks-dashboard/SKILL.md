@@ -5,9 +5,10 @@ description: >
   editing, or reviewing any Databricks Dashboard — dataset SQL queries, widget configuration,
   counter tiles, chart tiles, filter widgets, parameter references, layout, and markdown
   header tiles. Also load when the user asks about refreshing dashboards, sharing, embedding,
-  or scheduling. Enforces Gold-layer-only datasets, parameterized SQL, and Alpura KPI
-  conventions. Always pair with @databricks-dashboard-colors for theme/color tokens and
-  @ui-ux-patterns for chart type decisions.
+  scheduling, a P&L bridge, a waterfall chart, or any Custom Vega-Lite visualization not in
+  Lakeview's built-in chart picker. Enforces Gold-layer-only datasets, parameterized SQL, and
+  Alpura KPI conventions. Always pair with @databricks-dashboard-colors for theme/color
+  tokens and @ui-ux-patterns for chart type decisions.
 ---
 
 # Databricks AI/BI Dashboard Patterns — Alpura
@@ -330,6 +331,462 @@ Always set:
   - Service principal for scheduled runs (not personal credentials)
   - Warehouse: Serverless SQL (lowest cost for scheduled refresh)
 ```
+
+---
+
+## Custom Visualizations (Vega-Lite) — P&L Waterfall Bridge
+
+Lakeview's built-in chart type picker (Counter, Line/Area, Bar, Pivot, Table) has no native
+waterfall/bridge chart. For P&L bridges, budget-vs-actuals, or cost breakdowns, use a
+**Custom (Vega-Lite)** visualization widget instead of approximating one with a stacked bar.
+
+> Sourced from **ALP-Waterfall v1.2.0**, Alpura's own community widget at
+> [alpura.io/vizdbx](https://alpura.io/vizdbx) — reuse this spec rather than writing a new
+> waterfall from scratch. VizDBX also publishes ALP Revenue Trend, ALP Sales by Category,
+> ALP Sales vs Cost Matrix, and ALP Sales Donut — check there before building any custom
+> chart type this skill doesn't already cover.
+
+### Wiring it into a dashboard
+
+1. Add a dataset whose SQL returns exactly the three Data Contract columns below, in the
+   row order you want bars to appear (add an `ORDER BY` — Vega renders rows as supplied).
+2. Add a visualization widget → **Custom (Vega-Lite)** → paste the spec JSON below.
+3. The spec's `data.name` is `databricks_query` — Lakeview auto-binds your dataset to it;
+   do not rename it.
+4. It's a community spec, not an official Databricks widget — review the transform logic
+   before production use like you would any code you didn't write yourself.
+
+### Data contract
+
+| Column | Type | Meaning |
+|---|---|---|
+| `category` | string | Bar label, rendered in the SQL's row order — order the query explicitly |
+| `amount` | number | Delta value for that step (negative for a decrease) |
+| `measure` | string | `'total'` anchors a bar to zero (start/end); any other value floats as a step |
+
+```sql
+-- Dataset: pl_bridge — ord controls left-to-right bar order
+SELECT category, amount, measure
+FROM (
+  SELECT 'Inicio' AS category, :start_revenue AS amount, 'total' AS measure, 1 AS ord
+  UNION ALL
+  SELECT 'Ventas', delta_ventas, 'delta', 2 FROM prod.gold.pl_bridge_period
+  UNION ALL
+  SELECT 'COGS', delta_cogs, 'delta', 3 FROM prod.gold.pl_bridge_period
+  -- ... one row per bridge step ...
+  UNION ALL
+  SELECT 'Total', :end_revenue, 'total', 99
+)
+ORDER BY ord
+```
+
+### Dark spec (default — `alpura-dashboard-dark`)
+
+```json
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "_name": "ALP-Waterfall",
+  "_version": "1.2.0",
+  "_theme": "dark",
+  "_description": "P&L bridge / waterfall chart with toggleable per-step arrows vs overall bridge. Dark theme — Alpura UX system. In Databricks AI/BI Dashboards, pass this as renderSpec.jsonSpec.spec stringified JSON; data.name must be 'databricks_query'.",
+  "_data_contract": {
+    "category": "string — bar label, ordered as supplied",
+    "amount": "number — delta value",
+    "measure": "string — 'total' anchors bar to zero; any other value = floating delta bar"
+  },
+  "_params": {
+    "currencyPrefix": "string — default '$'",
+    "unitSuffix": "string — default ' M'",
+    "showAllArrows": "boolean — true shows every step arrow; false shows only first-to-last bridge"
+  },
+  "width": "container",
+  "height": "container",
+  "config": {
+    "background": "#161b22",
+    "autosize": { "type": "fit", "contains": "padding" },
+    "view": { "stroke": null, "fill": "#161b22" },
+    "axisY": {
+      "gridColor": "#30363d",
+      "domainOpacity": 0,
+      "tickOpacity": 0,
+      "labelColor": "#8b949e",
+      "titleColor": "#8b949e"
+    },
+    "font": "Inter, system-ui"
+  },
+  "params": [
+    { "name": "currencyPrefix", "value": "$" },
+    { "name": "unitSuffix", "value": " M" },
+    {
+      "name": "showAllArrows",
+      "value": true,
+      "bind": { "input": "checkbox", "name": "Mostrar todas las flechas  " }
+    }
+  ],
+  "data": { "name": "databricks_query" },
+  "transform": [
+    { "window": [{ "op": "row_number", "as": "order" }], "frame": [null, 0] },
+    { "calculate": "datum.measure === 'total' ? 1 : 0", "as": "is_total" },
+    {
+      "window": [{ "op": "sum", "field": "is_total", "as": "seg" }],
+      "sort": [{ "field": "order" }],
+      "frame": [null, 0]
+    },
+    {
+      "window": [{ "op": "sum", "field": "amount", "as": "run" }],
+      "groupby": ["seg"],
+      "sort": [{ "field": "order" }],
+      "frame": [null, 0]
+    },
+    {
+      "joinaggregate": [
+        { "op": "max", "field": "amount", "as": "gmax_amt" },
+        { "op": "count", "as": "gcount" }
+      ]
+    },
+    { "calculate": "datum.measure === 'total' ? datum.amount : datum.run", "as": "sum" },
+    {
+      "calculate": "datum.measure === 'total' ? 0 : datum.run - datum.amount",
+      "as": "previous_sum"
+    },
+    {
+      "window": [{ "op": "lag", "field": "sum", "as": "prev_sum_col" }],
+      "sort": [{ "field": "order" }],
+      "frame": [null, null]
+    },
+    { "calculate": "datum.order > 1 ? datum.sum - datum.prev_sum_col : null", "as": "step_delta" },
+    {
+      "calculate": "datum.order > 1 ? (datum.sum - datum.prev_sum_col)/datum.prev_sum_col : null",
+      "as": "step_pct"
+    },
+    { "joinaggregate": [{ "op": "max", "field": "sum", "as": "gmax" }] },
+    {
+      "calculate": "datum.measure === 'total' ? 'total' : (datum.amount >= 0 ? 'increase' : 'decrease')",
+      "as": "cat_color"
+    },
+    {
+      "calculate": "datum.measure === 'total' ? null : datum.amount / datum.previous_sum",
+      "as": "pct_step"
+    },
+    { "calculate": "datum.order - 1", "as": "prev_x" },
+    { "calculate": "datum.order + 1", "as": "next_x" },
+    { "calculate": "datum.order - 0.5", "as": "cx" },
+    {
+      "calculate": "max(datum.prev_sum_col == null ? datum.sum : datum.prev_sum_col, datum.sum) + datum.gmax * 0.10",
+      "as": "arrow_y"
+    },
+    { "calculate": "datum.gmax * 0.09", "as": "boxH" },
+    { "calculate": "datum.arrow_y + datum.gmax * 0.02", "as": "box_y1" },
+    { "calculate": "datum.box_y1 + datum.boxH", "as": "box_y2" },
+    { "calculate": "(datum.box_y1 + datum.box_y2) / 2", "as": "box_cy" },
+    { "calculate": "datum.box_cy + datum.boxH * 0.24", "as": "amt_y" },
+    { "calculate": "datum.box_cy - datum.boxH * 0.24", "as": "pct_y" },
+    { "calculate": "datum.cx - 0.34", "as": "bx1" },
+    { "calculate": "datum.cx + 0.34", "as": "bx2" },
+    {
+      "calculate": "currencyPrefix + format(datum.sum, ',.0f') + unitSuffix",
+      "as": "total_label"
+    },
+    {
+      "calculate": "(datum.amount < 0 ? '−' : '+') + currencyPrefix + format(abs(datum.amount), ',.0f') + unitSuffix",
+      "as": "amt_label"
+    },
+    {
+      "calculate": "(datum.pct_step < 0 ? '−' : '+') + format(abs(datum.pct_step), '.1%')",
+      "as": "pct_label"
+    },
+    {
+      "calculate": "(datum.step_delta < 0 ? '−' : '+') + currencyPrefix + format(abs(datum.step_delta), ',.0f') + unitSuffix",
+      "as": "bamt_label"
+    },
+    {
+      "calculate": "(datum.step_pct < 0 ? '−' : '+') + format(abs(datum.step_pct), '.1%')",
+      "as": "bpct_label"
+    },
+    {
+      "window": [{ "op": "first_value", "field": "sum", "as": "firstTotal" }],
+      "sort": [{ "field": "order" }],
+      "frame": [null, null]
+    },
+    {
+      "window": [{ "op": "last_value", "field": "sum", "as": "lastTotal" }],
+      "sort": [{ "field": "order" }],
+      "frame": [null, null]
+    },
+    { "calculate": "1", "as": "firstX" },
+    { "calculate": "datum.gcount", "as": "lastX" },
+    { "calculate": "(1 + datum.gcount)/2", "as": "cx_all" },
+    { "calculate": "datum.gmax * 1.12", "as": "y_overall" },
+    { "calculate": "datum.lastTotal - datum.firstTotal", "as": "overall_amt" },
+    {
+      "calculate": "(datum.lastTotal - datum.firstTotal)/datum.firstTotal",
+      "as": "overall_pct"
+    },
+    { "calculate": "datum.y_overall + datum.gmax*0.02", "as": "obox_y1" },
+    { "calculate": "datum.obox_y1 + datum.boxH", "as": "obox_y2" },
+    { "calculate": "(datum.obox_y1 + datum.obox_y2)/2", "as": "obox_cy" },
+    { "calculate": "datum.obox_cy + datum.boxH*0.24", "as": "oamt_y" },
+    { "calculate": "datum.obox_cy - datum.boxH*0.24", "as": "opct_y" },
+    { "calculate": "datum.cx_all - 0.40", "as": "obx1" },
+    { "calculate": "datum.cx_all + 0.40", "as": "obx2" },
+    {
+      "calculate": "(datum.overall_amt < 0 ? '−' : '+') + currencyPrefix + format(abs(datum.overall_amt), ',.0f') + unitSuffix",
+      "as": "oamt_label"
+    },
+    {
+      "calculate": "(datum.overall_pct < 0 ? '−' : '+') + format(abs(datum.overall_pct), '.1%')",
+      "as": "opct_label"
+    }
+  ],
+  "encoding": {
+    "x": {
+      "field": "order",
+      "type": "quantitative",
+      "scale": { "padding": 60, "nice": false },
+      "axis": {
+        "title": "Concepto",
+        "labels": false,
+        "ticks": false,
+        "grid": false,
+        "domainColor": "#30363d",
+        "titlePadding": 30,
+        "titleColor": "#8b949e"
+      }
+    }
+  },
+  "layer": [
+    {
+      "transform": [{ "filter": "datum.next_x <= datum.gcount" }],
+      "mark": { "type": "rule", "strokeWidth": 1, "strokeDash": [4, 3], "color": "#484f58" },
+      "encoding": {
+        "x": { "field": "order" },
+        "x2": { "field": "next_x" },
+        "y": { "field": "sum", "type": "quantitative" }
+      }
+    },
+    {
+      "mark": { "type": "bar", "size": 46, "stroke": "#0d1117", "strokeWidth": 1 },
+      "encoding": {
+        "y": {
+          "field": "previous_sum",
+          "type": "quantitative",
+          "axis": {
+            "title": "Importe (MXN)",
+            "format": "~s",
+            "labelColor": "#8b949e",
+            "titleColor": "#8b949e"
+          }
+        },
+        "y2": { "field": "sum" },
+        "color": {
+          "field": "cat_color",
+          "type": "nominal",
+          "scale": {
+            "domain": ["total", "increase", "decrease"],
+            "range": ["#00bcd4", "#26a641", "#f85149"]
+          },
+          "legend": null
+        },
+        "tooltip": [
+          { "field": "category", "type": "nominal", "title": "Concepto" },
+          { "field": "amount", "type": "quantitative", "title": "Importe", "format": ",.0f" },
+          { "field": "sum", "type": "quantitative", "title": "Acumulado", "format": ",.0f" },
+          { "field": "pct_step", "type": "quantitative", "title": "% vs. paso previo", "format": ".1%" }
+        ]
+      }
+    },
+    {
+      "transform": [{ "filter": "datum.measure === 'total'" }],
+      "mark": { "type": "text", "baseline": "bottom", "dy": -6, "fontWeight": "bold", "fontSize": 12, "color": "#e6edf3" },
+      "encoding": {
+        "x": { "field": "order" },
+        "y": { "field": "sum", "type": "quantitative" },
+        "text": { "field": "total_label" }
+      }
+    },
+    {
+      "transform": [{ "filter": "datum.order > 1 && showAllArrows && datum.step_delta != 0" }],
+      "mark": { "type": "rule", "strokeWidth": 1.2, "color": "#8b949e" },
+      "encoding": {
+        "x": { "field": "prev_x" },
+        "x2": { "field": "order" },
+        "y": { "field": "arrow_y", "type": "quantitative" }
+      }
+    },
+    {
+      "transform": [{ "filter": "datum.order > 1 && showAllArrows && datum.step_delta != 0" }],
+      "mark": { "type": "rule", "strokeWidth": 1.2, "color": "#8b949e" },
+      "encoding": {
+        "x": { "field": "prev_x" },
+        "y": { "field": "arrow_y", "type": "quantitative" },
+        "y2": { "field": "prev_sum_col" }
+      }
+    },
+    {
+      "transform": [{ "filter": "datum.order > 1 && showAllArrows && datum.step_delta != 0" }],
+      "mark": { "type": "rule", "strokeWidth": 1.2, "color": "#8b949e" },
+      "encoding": {
+        "x": { "field": "order" },
+        "y": { "field": "arrow_y", "type": "quantitative" },
+        "y2": { "field": "sum" }
+      }
+    },
+    {
+      "transform": [{ "filter": "datum.order > 1 && showAllArrows && datum.step_delta != 0" }],
+      "mark": { "type": "point", "shape": "triangle-down", "filled": true, "size": 70, "color": "#8b949e" },
+      "encoding": {
+        "x": { "field": "prev_x" },
+        "y": { "field": "prev_sum_col", "type": "quantitative" }
+      }
+    },
+    {
+      "transform": [{ "filter": "datum.order > 1 && showAllArrows && datum.step_delta != 0" }],
+      "mark": { "type": "point", "shape": "triangle-down", "filled": true, "size": 70, "color": "#8b949e" },
+      "encoding": {
+        "x": { "field": "order" },
+        "y": { "field": "sum", "type": "quantitative" }
+      }
+    },
+    {
+      "transform": [{ "filter": "datum.order > 1 && showAllArrows && datum.step_delta != 0" }],
+      "mark": { "type": "rect", "fill": "#161b22", "stroke": "#30363d", "strokeWidth": 1, "cornerRadius": 4 },
+      "encoding": {
+        "x": { "field": "bx1" },
+        "x2": { "field": "bx2" },
+        "y": { "field": "box_y1", "type": "quantitative" },
+        "y2": { "field": "box_y2" }
+      }
+    },
+    {
+      "transform": [{ "filter": "datum.order > 1 && showAllArrows && datum.step_delta != 0" }],
+      "mark": { "type": "text", "align": "center", "fontWeight": "bold", "fontSize": 12, "color": "#e6edf3" },
+      "encoding": {
+        "x": { "field": "cx" },
+        "y": { "field": "amt_y", "type": "quantitative" },
+        "text": { "field": "bamt_label" }
+      }
+    },
+    {
+      "transform": [{ "filter": "datum.order > 1 && showAllArrows && datum.step_delta != 0" }],
+      "mark": { "type": "text", "align": "center", "fontSize": 11, "color": "#8b949e" },
+      "encoding": {
+        "x": { "field": "cx" },
+        "y": { "field": "pct_y", "type": "quantitative" },
+        "text": { "field": "bpct_label" }
+      }
+    },
+    {
+      "transform": [{ "filter": "datum.order == 1 && !showAllArrows" }],
+      "mark": { "type": "rule", "strokeWidth": 1.2, "color": "#8b949e" },
+      "encoding": {
+        "x": { "field": "firstX" },
+        "x2": { "field": "lastX" },
+        "y": { "field": "y_overall", "type": "quantitative" }
+      }
+    },
+    {
+      "transform": [{ "filter": "datum.order == 1 && !showAllArrows" }],
+      "mark": { "type": "rule", "strokeWidth": 1.2, "color": "#8b949e" },
+      "encoding": {
+        "x": { "field": "firstX" },
+        "y": { "field": "y_overall", "type": "quantitative" },
+        "y2": { "field": "firstTotal" }
+      }
+    },
+    {
+      "transform": [{ "filter": "datum.order == 1 && !showAllArrows" }],
+      "mark": { "type": "rule", "strokeWidth": 1.2, "color": "#8b949e" },
+      "encoding": {
+        "x": { "field": "lastX" },
+        "y": { "field": "y_overall", "type": "quantitative" },
+        "y2": { "field": "lastTotal" }
+      }
+    },
+    {
+      "transform": [{ "filter": "datum.order == 1 && !showAllArrows" }],
+      "mark": { "type": "point", "shape": "triangle-down", "filled": true, "size": 80, "color": "#8b949e" },
+      "encoding": {
+        "x": { "field": "firstX" },
+        "y": { "field": "firstTotal", "type": "quantitative" }
+      }
+    },
+    {
+      "transform": [{ "filter": "datum.order == 1 && !showAllArrows" }],
+      "mark": { "type": "point", "shape": "triangle-down", "filled": true, "size": 80, "color": "#8b949e" },
+      "encoding": {
+        "x": { "field": "lastX" },
+        "y": { "field": "lastTotal", "type": "quantitative" }
+      }
+    },
+    {
+      "transform": [{ "filter": "datum.order == 1 && !showAllArrows" }],
+      "mark": { "type": "rect", "fill": "#161b22", "stroke": "#30363d", "strokeWidth": 1, "cornerRadius": 4 },
+      "encoding": {
+        "x": { "field": "obx1" },
+        "x2": { "field": "obx2" },
+        "y": { "field": "obox_y1", "type": "quantitative" },
+        "y2": { "field": "obox_y2" }
+      }
+    },
+    {
+      "transform": [{ "filter": "datum.order == 1 && !showAllArrows" }],
+      "mark": { "type": "text", "align": "center", "fontWeight": "bold", "fontSize": 13, "color": "#e6edf3" },
+      "encoding": {
+        "x": { "field": "cx_all" },
+        "y": { "field": "oamt_y", "type": "quantitative" },
+        "text": { "field": "oamt_label" }
+      }
+    },
+    {
+      "transform": [{ "filter": "datum.order == 1 && !showAllArrows" }],
+      "mark": { "type": "text", "align": "center", "fontSize": 11, "color": "#8b949e" },
+      "encoding": {
+        "x": { "field": "cx_all" },
+        "y": { "field": "opct_y", "type": "quantitative" },
+        "text": { "field": "opct_label" }
+      }
+    },
+    {
+      "mark": { "type": "text", "baseline": "top", "dy": 10, "fontSize": 12, "color": "#8b949e" },
+      "encoding": {
+        "x": { "field": "order" },
+        "y": { "datum": 0 },
+        "text": { "field": "category" }
+      }
+    }
+  ]
+}
+```
+
+### Light spec (`alpura-dashboard-light`)
+
+`transform` and `layer` structure are identical to the dark spec above — Vega-Lite specs are
+verbose enough that duplicating all ~900 lines here would just drift out of sync. Take the
+dark spec and change only these three things:
+
+1. **`config`** — replace with:
+   ```json
+   {
+     "autosize": { "type": "fit", "contains": "padding" },
+     "view": { "stroke": null },
+     "axisY": { "gridColor": "#eceef0", "domainOpacity": 0, "tickOpacity": 0 },
+     "font": "Helvetica, Arial, sans-serif"
+   }
+   ```
+   (no `background`/`view.fill` override — the widget inherits the dashboard's light canvas)
+2. **Bar `color.scale.range`** — replace `["#00bcd4", "#26a641", "#f85149"]` with
+   `["#0E7C86", "#2E8B57", "#C0504D"]` (darker teal/green/red — the dark hues fail contrast
+   on a white canvas).
+3. **`boxH` calculate** — change `datum.gmax * 0.09` to `datum.gmax * 0.13`. Light mode's
+   annotation boxes need more vertical padding for the text to read cleanly.
+
+Every other `#e6edf3` / `#8b949e` / `#30363d` text and stroke color in `layer` stays as-is —
+those already read fine against a white canvas at the opacities used here.
+
+The dark spec's `total` and `decrease` colors (`#00bcd4`, `#f85149`) already match
+`@databricks-dashboard-colors`' primary-series and negative-delta tokens exactly — this
+widget was built against the same brand palette, so it composes cleanly with the rest of the
+dashboard theme without further adjustment.
 
 ---
 

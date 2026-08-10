@@ -61,7 +61,7 @@ ai-genie-factory/
 ├── skills/                            ← Agent Skills standard: one folder per skill
 │   ├── ui-ux-patterns/SKILL.md          ← @ui-ux-patterns — dark/light tokens, typography, KPI cards, charts (Apps)
 │   ├── databricks-app/SKILL.md          ← @databricks-app — app architecture, app.yaml, deployment, debug
-│   ├── databricks-dashboard/SKILL.md    ← @databricks-dashboard — AI/BI datasets, widgets, filters, scheduling
+│   ├── databricks-dashboard/SKILL.md    ← @databricks-dashboard — AI/BI datasets, widgets, filters, Vega-Lite waterfall
 │   ├── databricks-dashboard-colors/SKILL.md ← @databricks-dashboard-colors — Lakeview dark/light theme + palette
 │   ├── dlt-pipeline/SKILL.md            ← @dlt-pipeline — Bronze/Silver/Gold, CDC, SCD2, streaming
 │   ├── data-access/SKILL.md             ← @data-access — Statement Execution, Unity Catalog, DataAccessError
@@ -118,7 +118,7 @@ you want to force a specific skill regardless of wording.
 | 5 | `@data-access` skill | WorkspaceClient Statement Execution, Unity Catalog, DataAccessError |
 | 6 | `@ui-ux-patterns` skill | Design tokens, shadows, typography, charts, KPI cards (Apps) |
 | 7 | `@databricks-app` skill | App file layers, app.yaml, OAuth M2M, deployment, debug checklist |
-| 8 | `@databricks-dashboard` skill | AI/BI Lakeview dashboard SQL, widgets, filters, scheduling |
+| 8 | `@databricks-dashboard` skill | AI/BI Lakeview dashboard SQL, widgets, filters, scheduling, Vega-Lite waterfall |
 | 9 | `@databricks-dashboard-colors` skill | Lakeview dark/light theme tokens + visualization palette |
 | 10 | `@dlt-pipeline` skill | Bronze/Silver/Gold, serverless DLT, CDC, SCD2, streaming |
 | 11 | `@testing-scaffold` skill | pytest, mocked WorkspaceClient calls, pandas logic tests |
