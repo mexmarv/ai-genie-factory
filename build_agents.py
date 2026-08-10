@@ -2,8 +2,9 @@
 """
 build_agents.py — Assembles the lean AGENTS.md from core constraint modules only.
 
-Skills (data-access, ui-patterns, dlt-pipeline, testing-scaffold, databricks-app-design)
-live in skills/ and are loaded by Genie Code Agent mode on demand — NOT compiled here.
+Skills (data-access, ui-ux-patterns, databricks-app, databricks-dashboard,
+databricks-dashboard-colors, dlt-pipeline, testing-scaffold) live in skills/ and are
+loaded by Genie Code Agent mode on demand — NOT compiled here.
 
 Run after editing GLOBAL_RULES.md, STACK.md, or modules/error_handling.md / logging.md:
     python build_agents.py
