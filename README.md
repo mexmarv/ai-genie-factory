@@ -56,13 +56,14 @@ ai-genie-factory/
 │   ├── error_handling.md              ← try/except contracts, custom exceptions
 │   └── logging.md                     ← Structured logging standard (_logger.py)
 │
-├── skills/                            ← Databricks Genie Code Agent skills (flat .md files)
-│   ├── ui-ux-patterns.md              ← @ui-ux-patterns — design tokens, shadows, typography, KPI cards, charts, Dash + Streamlit shells
-│   ├── databricks-app.md              ← @databricks-app — full app architecture, file layers, app.yaml, OAuth, deployment, debug
-│   ├── databricks-dashboard.md        ← @databricks-dashboard — AI/BI Lakeview dashboards, dataset SQL, widget config, filters, scheduling
-│   ├── dlt-pipeline.md                ← @dlt-pipeline — Bronze/Silver/Gold, Auto Loader, CDC, SCD2, schema evolution, streaming
-│   ├── data-access.md                 ← @data-access — sql-connector + Config(), Unity Catalog, batching, DataAccessError
-│   └── testing-scaffold.md            ← @testing-scaffold — pytest, mocked dbsql.connect(), pandas logic tests
+├── skills/                            ← Agent Skills standard: one folder per skill
+│   ├── ui-ux-patterns/SKILL.md          ← @ui-ux-patterns — dark/light tokens, typography, KPI cards, charts (Apps)
+│   ├── databricks-app/SKILL.md          ← @databricks-app — app architecture, app.yaml, deployment, debug
+│   ├── databricks-dashboard/SKILL.md    ← @databricks-dashboard — AI/BI datasets, widgets, filters, scheduling
+│   ├── databricks-dashboard-colors/SKILL.md ← @databricks-dashboard-colors — Lakeview dark/light theme + palette
+│   ├── dlt-pipeline/SKILL.md            ← @dlt-pipeline — Bronze/Silver/Gold, CDC, SCD2, streaming
+│   ├── data-access/SKILL.md             ← @data-access — Statement Execution, Unity Catalog, DataAccessError
+│   └── testing-scaffold/SKILL.md        ← @testing-scaffold — pytest and mocked layer tests
 │
 ├── templates/
 │   ├── PROMPT_TEMPLATE.md             ← Exact prompt for every Genie Code session
@@ -102,13 +103,14 @@ ai-genie-factory/
 | 2 | `STACK.md` | Technology choices — never redefined per app |
 | 3 | `modules/error_handling.md` | Error contracts — never overridden |
 | 4 | `modules/logging.md` | Logging standard — never overridden |
-| 5 | `@data-access` skill | sql-connector + Config(), Unity Catalog, batching, DataAccessError |
-| 6 | `@ui-ux-patterns` skill | Design tokens, shadows, typography, charts, KPI cards |
+| 5 | `@data-access` skill | WorkspaceClient Statement Execution, Unity Catalog, DataAccessError |
+| 6 | `@ui-ux-patterns` skill | Design tokens, shadows, typography, charts, KPI cards (Apps) |
 | 7 | `@databricks-app` skill | App file layers, app.yaml, OAuth M2M, deployment, debug checklist |
 | 8 | `@databricks-dashboard` skill | AI/BI Lakeview dashboard SQL, widgets, filters, scheduling |
-| 9 | `@dlt-pipeline` skill | Bronze/Silver/Gold, serverless DLT, CDC, SCD2, streaming |
-| 10 | `@testing-scaffold` skill | pytest, mocked dbsql.connect(), pandas logic tests |
-| 11 | `APP.md` | App-specific spec — only what's unique to this app |
+| 9 | `@databricks-dashboard-colors` skill | Lakeview dark/light theme tokens + visualization palette |
+| 10 | `@dlt-pipeline` skill | Bronze/Silver/Gold, serverless DLT, CDC, SCD2, streaming |
+| 11 | `@testing-scaffold` skill | pytest, mocked WorkspaceClient calls, pandas logic tests |
+| 12 | `APP.md` | App-specific spec — only what's unique to this app |
 
 ---
 
@@ -129,16 +131,25 @@ From the repo root, run:
 # Deploy to your personal Genie Code folder (default)
 ./deploy.sh
 
-# Deploy workspace-wide so all users get the skills (requires admin)
+# Deploy workspace-wide so all users get the skills (requires workspace admin)
 ./deploy.sh --workspace
 
 # Use a specific ~/.databrickscfg profile
 ./deploy.sh --profile my-profile
+
+# Deploy to another user's personal folder (skip current-user lookup)
+./deploy.sh --user someone@alpura.com
+
+# Preview the exact commands without uploading anything
+./deploy.sh --workspace --dry-run
 ```
 
-The script uploads:
-- `AGENTS.md` → `.assistant/instructions.md` (Genie Code reads this as your instructions file)
-- Each `skills/<name>.md` → `.assistant/skills/<name>.md`
+The script uploads the exact paths documented by Databricks:
+
+- Workspace instructions: `AGENTS.md` → `/Workspace/.assistant_workspace_instructions.md`
+- Personal instructions: `AGENTS.md` → `/Users/<user>/.assistant_instructions.md`
+- Workspace skills: `skills/<name>/SKILL.md` → `/Workspace/.assistant/skills/<name>/SKILL.md`
+- Personal skills: `skills/<name>/SKILL.md` → `/Users/<user>/.assistant/skills/<name>/SKILL.md`
 
 > **What `import-dir` can't do:** The Databricks CLI's `import-dir` only handles notebooks (`.py`, `.sql`, `.ipynb`). Plain `.md` skill files must be uploaded as raw files — `deploy.sh` handles this automatically using `databricks workspace import --format RAW`.
 
@@ -153,14 +164,16 @@ The script uploads:
 ### Step 2 — Verify in Genie Code
 
 1. Open **Genie Code** in Databricks (sparkle icon, top-right)
-2. Click **⚙️ → User instructions** — `instructions.md` should appear loaded
+2. Click **⚙️** and open **User instructions** or **Workspace instructions**, depending on the deployment scope.
 3. Switch to **Agent mode** and @mention any skill to confirm it's available:
    ```
-   @ui-ux-patterns  @databricks-app  @databricks-dashboard
+   @ui-ux-patterns  @databricks-app  @databricks-dashboard  @databricks-dashboard-colors
    @dlt-pipeline  @data-access  @testing-scaffold
    ```
 
-Genie Code picks up skills automatically — no restart needed.
+Genie Code picks up instructions on the next interaction. For a changed skill, start a new chat; hard-refresh the browser if its metadata remains stale.
+
+Workspace instructions and skills guide Genie Code, but they are not a deterministic security boundary. Unity Catalog privileges, compute policies, service-principal permissions, and CI checks remain the enforcement layer. See [Workspace deployment and enforcement](docs/WORKSPACE_DEPLOYMENT.md).
 
 ---
 
@@ -176,7 +189,7 @@ Use `templates/PROMPT_TEMPLATE.md` as your prompt. Skills are loaded automatical
 
 ```
 @databricks-app @ui-ux-patterns build the sales dashboard per the spec below
-@databricks-dashboard build a native Lakeview dashboard for daily revenue
+@databricks-dashboard @databricks-dashboard-colors build a native Lakeview dashboard for daily revenue
 @dlt-pipeline create the ingestion pipeline for the orders feed
 @testing-scaffold add tests to the app I just built
 ```
@@ -193,13 +206,14 @@ python build_agents.py
 
 Output:
 ```
-✅  LEAN  AGENTS.md — 5,989 / 20,000 chars (29.9%)
+✅  LEAN  AGENTS.md — 7,294 / 20,000 chars (36.5%)
    Target: keep under 12,000 chars (60%) — domain knowledge belongs in skills/
 
-  Skills to deploy separately (copy to Workspace/.assistant/skills/):
+  Skills to deploy separately (copy to /Workspace/.assistant/skills/):
     @data-access
     @databricks-app
     @databricks-dashboard
+    @databricks-dashboard-colors
     @dlt-pipeline
     @testing-scaffold
     @ui-ux-patterns
@@ -215,15 +229,15 @@ Output:
    □ If no → re-prompt with PROMPT_TEMPLATE.md, @mention missing skill
 
 2. LAYER VIOLATIONS
-   □ dbsql.connect() outside data.py?  → @data-access, move inside a function
-   □ Config() called at module level?  → @databricks-app — moves inside callback
+   □ SQL outside data.py?  → @data-access, move it into the data layer
+   □ WorkspaceClient created in ui.py? → move it into data.py
    □ Business logic in ui.py?          → move to logic.py
    □ toPandas() called anywhere?       → Apps use pandas; data.py returns pd.DataFrame
 
 3. DATA ACCESS
-   □ Using sql-connector + Config() not WorkspaceClient().statement_execution?
-   □ Batching both queries in one dbsql.connect() call (not two separate connections)?
-   □ lat/lon/decimal columns CAST AS DOUBLE in SQL or pd.to_numeric() after load?
+   □ Using WorkspaceClient Statement Execution API in Databricks Apps?
+   □ Warehouse ID comes from configuration rather than a hardcoded literal?
+   □ Statement result types are normalized before logic/UI use?
 
 4. TABLE NAMES
    □ All refs three-part (catalog.schema.table)?
@@ -238,8 +252,8 @@ Output:
    □ ui.py catches exceptions and shows _error_figure()?
 
 7. DESIGN SYSTEM
-   □ Background #0d1117, cards #161b22?  → @ui-ux-patterns
-   □ All charts use plotly_dark template?
+   □ Uses the shared dark or light theme tokens? → @ui-ux-patterns
+   □ Plotly template follows the selected theme?
    □ No px.pie (use px.treemap), no #636efa (use #00bcd4)?
 
 8. PIPELINE
@@ -267,9 +281,9 @@ Output:
 All skills are aligned with Databricks' official AI Dev Kit:
 [github.com/databricks-solutions/ai-dev-kit](https://github.com/databricks-solutions/ai-dev-kit/tree/main/databricks-skills)
 
-Key patterns enforced from ai-dev-kit:
-- **Apps auth:** `databricks-sql-connector` + `Config()` credentials provider — never `WorkspaceClient().statement_execution`
-- **App startup:** empty globals + `dcc.Interval(max_intervals=1)` — `Config()` never at module level
+Key patterns enforced by this factory:
+- **Apps data access:** `WorkspaceClient` + Statement Execution API, isolated in `data.py`
+- **App startup:** no remote data calls at module import time
 - **app.yaml resources:** `valueFrom: sql-warehouse` — never hardcode IDs
 - **DLT:** serverless by default, `dlt.read()` not `spark.read()`
 - **Grants:** SP `applicationId` UUID — never display name
@@ -279,7 +293,7 @@ Key patterns enforced from ai-dev-kit:
 ## Contributing
 
 1. Edit `GLOBAL_RULES.md`, `STACK.md`, or `modules/*.md` → run `python3 build_agents.py`
-2. Edit skills in `skills/<name>.md` → run `./deploy.sh` to push changes
+2. Edit skills in `skills/<name>/SKILL.md` → run `./deploy.sh` to push changes
 3. Never edit `AGENTS.md` directly — it's generated
 4. Add new apps under `apps/<app-name>/APP.md`
 

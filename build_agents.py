@@ -9,13 +9,13 @@ Run after editing GLOBAL_RULES.md, STACK.md, or modules/error_handling.md / logg
     python build_agents.py
 
 Workspace deployment:
-    Copy AGENTS.md contents → Workspace/.assistant/instructions.md  (all users)
-    or /Users/<email>/.assistant/instructions.md                     (you only)
+    Copy AGENTS.md contents → /Workspace/.assistant_workspace_instructions.md
+    or /Users/<email>/.assistant_instructions.md
 
 Skills deployment:
-    Copy each skills/<name>.md →
-    Workspace/.assistant/skills/<name>.md   (workspace-wide)
-    /Users/<email>/.assistant/skills/<name>.md   (personal)
+    Copy each skills/<name>/SKILL.md →
+    /Workspace/.assistant/skills/<name>/SKILL.md
+    /Users/<email>/.assistant/skills/<name>/SKILL.md
 """
 
 from pathlib import Path
@@ -79,11 +79,11 @@ def build():
     if missing:
         print(f"  MISSING: {', '.join(missing)}\n")
 
-    print("  Skills to deploy separately (copy to Workspace/.assistant/skills/):")
+    print("  Skills to deploy separately (copy to /Workspace/.assistant/skills/):")
     skills_dir = ROOT / "skills"
     if skills_dir.exists():
-        for s in sorted(skills_dir.glob("*.md")):
-            print(f"    @{s.stem}")
+        for s in sorted(skills_dir.glob("*/SKILL.md")):
+            print(f"    @{s.parent.name}")
 
 if __name__ == "__main__":
     build()

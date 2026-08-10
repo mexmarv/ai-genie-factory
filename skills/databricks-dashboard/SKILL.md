@@ -6,7 +6,8 @@ description: >
   counter tiles, chart tiles, filter widgets, parameter references, layout, and markdown
   header tiles. Also load when the user asks about refreshing dashboards, sharing, embedding,
   or scheduling. Enforces Gold-layer-only datasets, parameterized SQL, and Alpura KPI
-  conventions. Always pair with @ui-ux-patterns for color and chart type decisions.
+  conventions. Always pair with @databricks-dashboard-colors for theme/color tokens and
+  @ui-ux-patterns for chart type decisions.
 ---
 
 # Databricks AI/BI Dashboard Patterns — Alpura
@@ -14,7 +15,9 @@ description: >
 Apply to every native Databricks Lakeview Dashboard. These run directly in the Databricks
 workspace — no Python app needed. Always read from Gold layer tables only.
 
-> Always load **@ui-ux-patterns** alongside this skill for color tokens and chart type rules. Follow the **60-30-10 rule** for colors and use **DM Sans** for your title fonts.
+> Always load **@databricks-dashboard-colors** alongside this skill for the dashboard's dark/light
+> theme tokens and visualization palette, set via the Lakeview Theme panel — not
+> `@ui-ux-patterns`, which covers Python/Plotly Apps. Follow the **60-30-10 rule** for colors.
 >
 > For **conversational / natural language** interfaces on top of Gold tables, use Genie Spaces
 > (managed via `manage_genie` MCP tool) instead of, or alongside, Lakeview Dashboards.
@@ -155,7 +158,7 @@ X axis:    order_date  (temporal)
 Y axis:    daily_revenue
 Series:    ma_7d (secondary line, dashed)
 Chart type: Area
-Color:     #00bcd4 (accent cyan — from @ui-ux-patterns SEQ)
+Color:     #00bcd4 (primary series — from @databricks-dashboard-colors)
 Fill:      light (8% opacity)
 Title:     Revenue Trend
 ```

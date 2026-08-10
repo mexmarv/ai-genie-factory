@@ -1,78 +1,135 @@
 #!/usr/bin/env bash
-# Deploy AI Genie Factory to Databricks Genie Code
-# Usage:
-#   ./deploy.sh                    # deploy to your personal .assistant folder
-#   ./deploy.sh --workspace        # deploy workspace-wide (requires admin)
-#   ./deploy.sh --profile myprof   # use a specific ~/.databrickscfg profile
+# Deploy AI Genie Factory instructions and Agent Skills to Databricks Genie Code.
+#
+# Workspace-wide (workspace admin):
+#   ./deploy.sh --workspace --profile DEFAULT
+#
+# Personal (the user is resolved from the authenticated CLI identity):
+#   ./deploy.sh --profile DEFAULT
+#   ./deploy.sh --profile DEFAULT --user user@example.com
 
 set -euo pipefail
 
-# ── Defaults ──────────────────────────────────────────────────────────────────
-EMAIL="marvin.nahmias@alpura.com"
 PROFILE="DEFAULT"
-PERSONAL_BASE="/Users/${EMAIL}/.assistant"
-WORKSPACE_BASE="/Workspace/.assistant"
-TARGET_BASE="$PERSONAL_BASE"
+SCOPE="personal"
+USERNAME=""
+DRY_RUN="false"
 
-# ── Arg parsing ───────────────────────────────────────────────────────────────
+usage() {
+  echo "Usage: $0 [--workspace] [--profile NAME] [--user EMAIL] [--dry-run]"
+}
+
 while [[ $# -gt 0 ]]; do
-  case $1 in
-    --workspace) TARGET_BASE="$WORKSPACE_BASE"; shift ;;
-    --profile)   PROFILE="$2"; shift 2 ;;
-    *) echo "Unknown arg: $1"; exit 1 ;;
+  case "$1" in
+    --workspace)
+      SCOPE="workspace"
+      shift
+      ;;
+    --profile)
+      [[ $# -ge 2 ]] || { usage; exit 2; }
+      PROFILE="$2"
+      shift 2
+      ;;
+    --user)
+      [[ $# -ge 2 ]] || { usage; exit 2; }
+      USERNAME="$2"
+      shift 2
+      ;;
+    --dry-run)
+      DRY_RUN="true"
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown argument: $1" >&2
+      usage
+      exit 2
+      ;;
   esac
 done
 
-SKILLS_TARGET="${TARGET_BASE}/skills"
-INSTRUCTIONS_TARGET="${TARGET_BASE}/instructions.md"
-CLI="databricks --profile $PROFILE"
+DBX=(databricks --profile "$PROFILE")
 
-echo ""
-echo "▶  AI Genie Factory — Databricks Deploy"
-echo "   Profile : $PROFILE"
-echo "   Target  : $TARGET_BASE"
-echo ""
-
-# ── Helper ────────────────────────────────────────────────────────────────────
-upload_file() {
-  local local_path="$1"
-  local remote_path="$2"
-  $CLI workspace import "$remote_path" \
-    --file "$local_path" \
-    --format RAW \
-    --overwrite
-  echo "  ✓  $(basename "$remote_path")"
-}
-
-# ── 1. Instructions (AGENTS.md → instructions.md) ─────────────────────────────
-echo "── Step 1: Upload AGENTS.md as instructions.md ──"
-$CLI workspace mkdirs "$TARGET_BASE" 2>/dev/null || true
-upload_file "AGENTS.md" "$INSTRUCTIONS_TARGET"
-
-# Workspace-wide: also upload to the top-level workspace instructions path
-# Databricks Genie Code reads this for the "Workspace instructions" panel
-if [[ "$TARGET_BASE" == "$WORKSPACE_BASE" ]]; then
-  upload_file "AGENTS.md" "/Workspace/.assistant_workspace_instructions.md"
+if [[ "$SCOPE" == "workspace" ]]; then
+  BASE="/Workspace/.assistant"
+  INSTRUCTIONS_TARGET="/Workspace/.assistant_workspace_instructions.md"
+else
+  if [[ -z "$USERNAME" ]]; then
+    if [[ "$DRY_RUN" == "true" ]]; then
+      USERNAME="<authenticated-user>"
+    else
+      USERNAME="$("${DBX[@]}" current-user me -o json | python3 -c 'import json,sys; print(json.load(sys.stdin)["userName"])')"
+    fi
+  fi
+  BASE="/Users/${USERNAME}/.assistant"
+  INSTRUCTIONS_TARGET="/Users/${USERNAME}/.assistant_instructions.md"
 fi
-echo ""
 
-# ── 2. Skills ─────────────────────────────────────────────────────────────────
-echo "── Step 2: Upload skills ──"
-$CLI workspace mkdirs "$SKILLS_TARGET" 2>/dev/null || true
+SKILLS_TARGET="${BASE}/skills"
 
-for skill_file in skills/*.md; do
+if [[ ! -f AGENTS.md ]]; then
+  echo "AGENTS.md not found. Run this script from the repository root." >&2
+  exit 1
+fi
+
+instruction_chars="$(wc -m < AGENTS.md | tr -d ' ')"
+if (( instruction_chars > 20000 )); then
+  echo "AGENTS.md has ${instruction_chars} characters; Genie Code only reads the first 20,000." >&2
+  exit 1
+fi
+
+skill_count=0
+for skill_file in skills/*/SKILL.md; do
   [[ -f "$skill_file" ]] || continue
-  skill_name=$(basename "$skill_file" .md)
-  upload_file "$skill_file" "${SKILLS_TARGET}/${skill_name}.md"
+  skill_count=$((skill_count + 1))
 done
 
-echo ""
-echo "✅  Deploy complete."
-echo ""
-echo "   Next steps:"
-echo "   1. Open Genie Code in Databricks (sparkle icon, top-right)"
-echo "   2. Click ⚙️ → User instructions → the file should already be loaded"
-echo "   3. In Agent mode, @mention skills by name:"
-echo "      @ui-ux-patterns  @databricks-app  @databricks-dashboard"
-echo "      @dlt-pipeline  @data-access  @testing-scaffold"
-echo ""
+if (( skill_count == 0 )); then
+  echo "No valid skills found. Expected skills/<name>/SKILL.md." >&2
+  exit 1
+fi
+
+run() {
+  if [[ "$DRY_RUN" == "true" ]]; then
+    printf 'DRY RUN:'
+    printf ' %q' "$@"
+    printf '\n'
+  else
+    "$@"
+  fi
+}
+
+upload_raw() {
+  local source="$1"
+  local target="$2"
+  run "${DBX[@]}" workspace import "$target" \
+    --file "$source" \
+    --format RAW \
+    --overwrite
+}
+
+echo "AI Genie Factory — Databricks deployment"
+echo "Profile: ${PROFILE}"
+echo "Scope: ${SCOPE}"
+echo "Instructions: ${INSTRUCTIONS_TARGET}"
+echo "Skills: ${SKILLS_TARGET}/<name>/SKILL.md"
+
+run "${DBX[@]}" workspace mkdirs "$BASE"
+upload_raw "AGENTS.md" "$INSTRUCTIONS_TARGET"
+
+run "${DBX[@]}" workspace mkdirs "$SKILLS_TARGET"
+for skill_file in skills/*/SKILL.md; do
+  [[ -f "$skill_file" ]] || continue
+  skill_name="$(basename "$(dirname "$skill_file")")"
+  remote_dir="${SKILLS_TARGET}/${skill_name}"
+  run "${DBX[@]}" workspace mkdirs "$remote_dir"
+  upload_raw "$skill_file" "${remote_dir}/SKILL.md"
+done
+
+echo "Deployment complete. Start a new Genie Code chat to load changed skills."
+if [[ "$SCOPE" == "workspace" ]]; then
+  echo "Admin follow-up: restrict write access on /Workspace/.assistant and the workspace instructions file."
+fi

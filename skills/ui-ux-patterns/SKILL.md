@@ -6,7 +6,7 @@ description: >
   Plotly charts, KPI cards, filter panels, data tables, dark-theme layouts, or any
   visual component. Also @mention when the user asks about colors, theme, design tokens,
   chart styling, typography, shadows, layout order, or "making the app look right".
-  Covers: color tokens, shadow/elevation system, typography scale, Plotly dark theme,
+  Covers: dark and light color tokens, shadow/elevation system, typography scale, Plotly themes,
   KPI cards, app header, filter bar, chart patterns with hover templates, Dash and
   Streamlit full shell patterns, and number formatting utilities.
 ---
@@ -17,36 +17,63 @@ Apply to every `ui.py` and `app.py` file generated or reviewed.
 
 ---
 
-## Design Tokens
+## Theme contract
 
-Use these exact hex values. Never invent colors per app. These adhere to the **60-30-10 rule**:
+Every generated UI must support both `alpura-dark` and `alpura-light`. Use semantic token
+names in components; never embed a mode-specific hex value in business UI code. The default
+is `alpura-dark`, and the user may switch modes without changing chart meaning or data colors.
+
+These tokens adhere to the **60-30-10 rule**:
 - **60% Dominant (Neutral Backgrounds)**: `Background`, `Surface`, `Card`. Keeping borders matching widget backgrounds reduces visual clutter.
 - **30% Secondary**: `Text primary`, `Text secondary`, and Chart Color Sequences.
 - **10% Accent**: `Accent cyan` for interactive elements like filters, tabs, and buttons.
 
-| Token | Hex | Use |
-|---|---|---|
-| Background | `#080d14` | App canvas — deepest layer |
-| Surface | `#0d1117` | Page body, section areas |
-| Card | `#111820` | Panels, chart containers |
-| Card hover | `#161d27` | Card hover / active state |
-| Elevated | `#1a2332` | Dropdowns, modals, tooltips |
-| Border subtle | `#1e2a3a` | Dividers, inner separators |
-| Border default | `#253040` | Card edges, input borders |
-| Border active | `#00bcd4` | Focused inputs, selected filters |
-| Text primary | `#e8edf4` | Headlines, KPI values |
-| Text secondary | `#8b96a8` | Labels, axis text, subtitles |
-| Text muted | `#4a5568` | Placeholders, disabled |
-| Accent cyan | `#00bcd4` | Primary CTA, active state, links |
-| Accent cyan dim | `#008fa3` | Secondary cyan, hover state |
-| Accent purple | `#7c4dff` | Secondary metrics, alt charts |
-| Positive | `#22c55e` | Positive deltas, success |
-| Negative | `#f43f5e` | Negative deltas, errors |
-| Warning | `#f59e0b` | Warnings, neutral-alert |
-| Alpura navy | `#003087` | App header bar only |
-| Alpura blue glow | `rgba(0,48,135,0.15)` | Diffused header shadow |
-| Cyan glow | `rgba(0,188,212,0.12)` | Active element halo |
-| Cyan glow strong | `rgba(0,188,212,0.25)` | Focus rings, selected KPI |
+| Token | `alpura-dark` | `alpura-light` | Use |
+|---|---:|---:|---|
+| Background | `#080d14` | `#f4f7fb` | App canvas |
+| Surface | `#0d1117` | `#ffffff` | Page and section areas |
+| Card | `#111820` | `#ffffff` | Panels and chart containers |
+| Card hover | `#161d27` | `#edf4fa` | Hover / active surface |
+| Elevated | `#1a2332` | `#ffffff` | Dropdowns, modals, tooltips |
+| Border subtle | `#1e2a3a` | `#d7e0ea` | Dividers |
+| Border default | `#253040` | `#c2ceda` | Card and input edges |
+| Border active | `#00bcd4` | `#007a8a` | Focused and selected elements |
+| Text primary | `#e8edf4` | `#0d1b2a` | Headlines and KPI values |
+| Text secondary | `#8b96a8` | `#40566f` | Labels, axes, subtitles |
+| Text muted | `#657287` | `#61758a` | Placeholders and disabled text |
+| Accent cyan | `#00bcd4` | `#007a8a` | Primary CTA, active state, links |
+| Accent cyan dim | `#008fa3` | `#006675` | Accent hover |
+| Accent purple | `#7c4dff` | `#5b32d6` | Secondary metrics |
+| Positive | `#22c55e` | `#157a3d` | Positive deltas and success |
+| Negative | `#f43f5e` | `#c32645` | Negative deltas and errors |
+| Warning | `#f59e0b` | `#9a5b00` | Warnings |
+| Alpura navy | `#003087` | `#003087` | Brand header/accent |
+
+Normal text must meet WCAG AA contrast (4.5:1). Never communicate status by color alone:
+pair positive/negative/warning colors with a label or icon. Focus rings must remain visible,
+and motion must respect `prefers-reduced-motion`.
+
+### CSS semantic tokens
+
+```css
+:root, [data-theme="alpura-light"] {
+  --bg: #f4f7fb; --surface: #ffffff; --card: #ffffff; --card-hover: #edf4fa;
+  --elevated: #ffffff; --border-subtle: #d7e0ea; --border: #c2ceda;
+  --border-active: #007a8a; --text-primary: #0d1b2a; --text-secondary: #40566f;
+  --text-muted: #61758a; --accent: #007a8a; --accent-hover: #006675;
+  --purple: #5b32d6; --positive: #157a3d; --negative: #c32645; --warning: #9a5b00;
+  color-scheme: light;
+}
+
+[data-theme="alpura-dark"] {
+  --bg: #080d14; --surface: #0d1117; --card: #111820; --card-hover: #161d27;
+  --elevated: #1a2332; --border-subtle: #1e2a3a; --border: #253040;
+  --border-active: #00bcd4; --text-primary: #e8edf4; --text-secondary: #8b96a8;
+  --text-muted: #657287; --accent: #00bcd4; --accent-hover: #008fa3;
+  --purple: #7c4dff; --positive: #22c55e; --negative: #f43f5e; --warning: #f59e0b;
+  color-scheme: dark;
+}
+```
 
 ---
 
@@ -94,26 +121,37 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import pandas as pd
 
-BASE_LAYOUT = dict(
-    template="plotly_dark",
-    paper_bgcolor="#111820",
-    plot_bgcolor="#111820",
-    font=dict(family="Inter, -apple-system, system-ui, sans-serif", color="#8b96a8", size=11),
-    title_font=dict(family="DM Sans, system-ui, sans-serif", size=13, color="#e8edf4"),
-    margin=dict(l=48, r=24, t=44, b=44),
-    xaxis=dict(gridcolor="rgba(37,48,64,0.8)", linecolor="rgba(37,48,64,0.6)",
-               tickfont=dict(size=10, color="#4a5568"), zeroline=False),
-    yaxis=dict(gridcolor="rgba(37,48,64,0.8)", linecolor="rgba(37,48,64,0.6)",
-               tickfont=dict(size=10, color="#4a5568"), zeroline=False),
-    legend=dict(bgcolor="rgba(0,0,0,0)", bordercolor="rgba(37,48,64,0.5)", borderwidth=1,
-                font=dict(size=11, color="#8b96a8")),
-    hoverlabel=dict(bgcolor="#1a2332", bordercolor="rgba(0,188,212,0.3)",
-                    font=dict(family="Inter, system-ui", size=12, color="#e8edf4")),
-    modebar=dict(bgcolor="rgba(0,0,0,0)", color="#4a5568", activecolor="#00bcd4"),
-)
+PLOTLY_THEME = {
+    "dark": {"template": "plotly_dark", "card": "#111820", "text": "#8b96a8",
+             "title": "#e8edf4", "muted": "#657287", "grid": "rgba(37,48,64,0.8)",
+             "line": "rgba(37,48,64,0.6)", "tooltip": "#1a2332"},
+    "light": {"template": "plotly_white", "card": "#ffffff", "text": "#40566f",
+              "title": "#0d1b2a", "muted": "#61758a", "grid": "rgba(194,206,218,0.65)",
+              "line": "rgba(194,206,218,0.9)", "tooltip": "#ffffff"},
+}
 
-def apply_base_layout(fig) -> go.Figure:
-    fig.update_layout(**BASE_LAYOUT)
+def base_layout(mode: str = "dark") -> dict:
+    t = PLOTLY_THEME[mode]
+    return dict(
+    template=t["template"],
+    paper_bgcolor=t["card"],
+    plot_bgcolor=t["card"],
+    font=dict(family="Inter, -apple-system, system-ui, sans-serif", color=t["text"], size=11),
+    title_font=dict(family="DM Sans, system-ui, sans-serif", size=13, color=t["title"]),
+    margin=dict(l=48, r=24, t=44, b=44),
+    xaxis=dict(gridcolor=t["grid"], linecolor=t["line"],
+               tickfont=dict(size=10, color=t["muted"]), zeroline=False),
+    yaxis=dict(gridcolor=t["grid"], linecolor=t["line"],
+               tickfont=dict(size=10, color=t["muted"]), zeroline=False),
+    legend=dict(bgcolor="rgba(0,0,0,0)", bordercolor=t["line"], borderwidth=1,
+                font=dict(size=11, color=t["text"])),
+    hoverlabel=dict(bgcolor=t["tooltip"], bordercolor="rgba(0,122,138,0.35)",
+                    font=dict(family="Inter, system-ui", size=12, color=t["title"])),
+    modebar=dict(bgcolor="rgba(0,0,0,0)", color=t["muted"], activecolor="#007a8a"),
+    )
+
+def apply_base_layout(fig, mode: str = "dark") -> go.Figure:
+    fig.update_layout(**base_layout(mode))
     return fig
 ```
 
@@ -472,7 +510,8 @@ Always `<extra></extra>` to suppress trace name box. Always `<b>` the value.
 
 ## Forbidden
 
-- Light or white backgrounds anywhere
+- Hardcoded mode-specific colors inside components; consume semantic tokens instead
+- Shipping only one color mode; every UI must support `alpura-dark` and `alpura-light`
 - `px.pie` — always `px.treemap`
 - Default Plotly blue `#636efa` — always `#00bcd4`
 - Flat unshadowed cards — every surface must have `boxShadow`

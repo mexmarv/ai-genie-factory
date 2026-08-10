@@ -697,7 +697,7 @@
         <span class="stat-label">Apps Shipped</span>
       </div>
       <div class="stat-pill reveal" role="listitem" style="transition-delay:.1s">
-        <span class="stat-num" data-target="6" data-suffix="">0</span>
+        <span class="stat-num" data-target="7" data-suffix="">0</span>
         <span class="stat-label">Agent Skills</span>
       </div>
       <div class="stat-pill reveal" role="listitem" style="transition-delay:.2s">
@@ -886,8 +886,8 @@
   <div class="section-inner">
     <div class="reveal">
       <span class="section-tag">Skills</span>
-      <h2>Six Specialist Agents</h2>
-      <p class="section-lead">Each skill is a focused context file deployed to your Databricks workspace. @mention any skill in Genie Code Agent Mode to load its expertise.</p>
+      <h2>Seven Specialist Agents</h2>
+      <p class="section-lead">Each skill is a folder with a SKILL.md deployed to your Databricks workspace under the Agent Skills standard. @mention any skill in Genie Code Agent Mode to load its expertise.</p>
     </div>
     <div class="skills-grid">
       <div class="skill-card reveal">
@@ -898,9 +898,9 @@
         </div>
         <div class="skill-mention">@data-access</div>
         <div class="skill-name">Data Access</div>
-        <div class="skill-desc">sql-connector + Config() credentials provider for Databricks Apps. Single-connection batching for performance. Decimal→float safety. Unity Catalog three-part names, DataAccessError contracts.</div>
+        <div class="skill-desc">WorkspaceClient + Statement Execution API for Databricks Apps. Identifier allowlists, bound parameters, Gold-only reads. Unity Catalog three-part names, DataAccessError contracts.</div>
         <div class="skill-tags">
-          <span class="skill-tag">sql-connector</span>
+          <span class="skill-tag">Statement Execution</span>
           <span class="skill-tag">Unity Catalog</span>
           <span class="skill-tag">data.py</span>
         </div>
@@ -913,7 +913,7 @@
         </div>
         <div class="skill-mention" style="color:var(--purple)">@ui-ux-patterns</div>
         <div class="skill-name">UX/UI Patterns</div>
-        <div class="skill-desc">Full design system — color tokens, shadow/elevation, Inter typography, KPI cards, Plotly dark theme, chart functions, Dash &amp; Streamlit shells.</div>
+        <div class="skill-desc">Full design system for Databricks Apps — dark &amp; light tokens, shadow/elevation, Inter typography, KPI cards, Plotly themes, chart functions, Dash &amp; Streamlit shells.</div>
         <div class="skill-tags">
           <span class="skill-tag">Design Tokens</span>
           <span class="skill-tag">Plotly Dark</span>
@@ -950,6 +950,32 @@
           <span class="skill-tag">AI/BI</span>
         </div>
       </div>
+      <div class="skill-card reveal" style="transition-delay:.19s">
+        <div class="skill-icon" style="background:rgba(204,144,194,.15);border-color:rgba(204,144,194,.3)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#cc90c2" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+            <circle cx="13.5" cy="6.5" r=".5" fill="#cc90c2"/><circle cx="17.5" cy="10.5" r=".5" fill="#7c4dff"/><circle cx="8.5" cy="7.5" r=".5" fill="#00bcd4"/><circle cx="6.5" cy="12.5" r=".5" fill="#eab0d0"/>
+            <path d="M12 2a10 10 0 100 20 1.5 1.5 0 001.5-1.5c0-.4-.15-.75-.4-1a1.5 1.5 0 010-2.12A1.5 1.5 0 0114.1 17H16a4 4 0 004-4c0-6-4-11-8-11z"/>
+          </svg>
+        </div>
+        <div class="skill-mention" style="color:#cc90c2">@databricks-dashboard-colors</div>
+        <div class="skill-name">Dashboard Theme</div>
+        <div class="skill-desc">Dark &amp; light Lakeview theme tokens extracted from a real production dashboard — canvas, widget, delta, and an 8-step categorical/sequential palette. Applied via workspace Appearance → AI/BI → Theme.</div>
+        <div class="skill-tags">
+          <span class="skill-tag">Dark + Light</span>
+          <span class="skill-tag">Workspace Theme</span>
+          <span class="skill-tag">Space Grotesk</span>
+        </div>
+        <div style="display:flex;gap:3px;margin-top:.9rem;border-radius:6px;overflow:hidden;height:16px">
+          <div style="flex:1;background:#00bcd4" title="#00bcd4"></div>
+          <div style="flex:1;background:#0b4b60" title="#0b4b60"></div>
+          <div style="flex:1;background:#1a6892" title="#1a6892"></div>
+          <div style="flex:1;background:#4d8cc0" title="#4d8cc0"></div>
+          <div style="flex:1;background:#9580ce" title="#9580ce"></div>
+          <div style="flex:1;background:#cc90c2" title="#cc90c2"></div>
+          <div style="flex:1;background:#eab0d0" title="#eab0d0"></div>
+          <div style="flex:1;background:#f8dae8" title="#f8dae8"></div>
+        </div>
+      </div>
       <div class="skill-card reveal" style="transition-delay:.21s">
         <div class="skill-icon" style="background:rgba(255,166,87,.12);border-color:rgba(255,166,87,.2)">
           <svg viewBox="0 0 24 24" fill="none" stroke="#ffa657" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
@@ -973,10 +999,10 @@
         </div>
         <div class="skill-mention" style="color:#3fb950">@testing-scaffold</div>
         <div class="skill-name">Testing Scaffold</div>
-        <div class="skill-desc">pytest patterns, mocked dbsql.connect() calls, pandas logic tests, DataAccessError assertion helpers. Tests business logic without hitting Unity Catalog.</div>
+        <div class="skill-desc">pytest patterns, mocked WorkspaceClient Statement Execution calls, pandas logic tests, DataAccessError assertion helpers. Tests business logic without hitting Unity Catalog.</div>
         <div class="skill-tags">
           <span class="skill-tag">pytest</span>
-          <span class="skill-tag">Mocked dbsql</span>
+          <span class="skill-tag">Mocked WorkspaceClient</span>
           <span class="skill-tag">logic.py</span>
         </div>
       </div>
@@ -1004,7 +1030,7 @@
       <div class="step-card reveal" style="transition-delay:.08s">
         <div class="step-num">02</div>
         <div class="step-title">Deploy Skills</div>
-        <div class="step-desc">Push instructions and all 6 skills to your Databricks workspace with one command.</div>
+        <div class="step-desc">Push instructions and all 7 skills to your Databricks workspace with one command.</div>
         <div class="step-code">./deploy.sh</div>
       </div>
       <div class="step-card reveal" style="transition-delay:.16s">
@@ -1017,7 +1043,7 @@
         <div class="step-num">04</div>
         <div class="step-title">Prompt Genie Code</div>
         <div class="step-desc">Open Agent Mode, paste your PROMPT_TEMPLATE + APP.md, @mention the skills you need.</div>
-        <div class="step-code">@databricks-app-design build per APP.md</div>
+        <div class="step-code">@databricks-app @ui-ux-patterns build per APP.md</div>
       </div>
     </div>
   </div>
@@ -1053,7 +1079,7 @@
           <div class="setup-num">3</div>
           <div>
             <div class="setup-step-title">Run deploy.sh</div>
-            <div class="setup-step-desc">Uploads AGENTS.md as your instructions file and deploys all 6 skills to your workspace.</div>
+            <div class="setup-step-desc">Uploads AGENTS.md as your instructions file and deploys all 7 skills to your workspace.</div>
           </div>
         </div>
         <div class="setup-step reveal" style="transition-delay:.24s">
